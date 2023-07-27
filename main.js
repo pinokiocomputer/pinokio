@@ -34,7 +34,11 @@ const titleBarOverlay = (theme) => {
         }
       } else {
         return {
-          color: "royalblue",
+//          color: "white",
+//          symbolColor: "black",
+//          color: "royalblue",
+//          symbolColor: "white"
+          color: "#191919",
           symbolColor: "white"
         }
       }
@@ -87,33 +91,115 @@ const attach = (event, webContents) => {
     let [width, height] = win.getSize()
     let [x,y] = win.getPosition()
 
-    if (features) {
-      if (features.startsWith("app") || features.startsWith("self")) {
-        return {
-          action: 'allow',
-          outlivesOpener: true,
-          overrideBrowserWindowOptions: {
-            width: (params.get("width") ? parseInt(params.get("width")) : width),
-            height: (params.get("height") ? parseInt(params.get("height")) : height),
-            x: x + 30,
-            y: y + 30,
 
-            parent: null,
-            titleBarStyle : "hidden",
-            titleBarOverlay : titleBarOverlay("default"),
-          }
+    let origin = new URL(url).origin
+    console.log("config", { config, root_url, origin })
+
+    // if the origin is the same as the pinokio host,
+    // always open in new window
+
+    // if not, check the features
+    // if features exists and it's app or self, open in pinokio
+    // otherwise if it's file, 
+
+    if (origin === root_url) {
+      return {
+        action: 'allow',
+        outlivesOpener: true,
+        overrideBrowserWindowOptions: {
+          width: (params.get("width") ? parseInt(params.get("width")) : width),
+          height: (params.get("height") ? parseInt(params.get("height")) : height),
+          x: x + 30,
+          y: y + 30,
+
+          parent: null,
+          titleBarStyle : "hidden",
+          titleBarOverlay : titleBarOverlay("default"),
         }
-      } else if (features.startsWith("file")) {
-        let u = features.replace("file://", "")
-        shell.showItemInFolder(u)
-        return { action: 'deny' };
-      } else {
-        return { action: 'deny' };
       }
     } else {
-      shell.openExternal(url);
-      return { action: 'deny' };
+      if (features) {
+        if (features.startsWith("app") || features.startsWith("self")) {
+          return {
+            action: 'allow',
+            outlivesOpener: true,
+            overrideBrowserWindowOptions: {
+              width: (params.get("width") ? parseInt(params.get("width")) : width),
+              height: (params.get("height") ? parseInt(params.get("height")) : height),
+              x: x + 30,
+              y: y + 30,
+
+              parent: null,
+              titleBarStyle : "hidden",
+              titleBarOverlay : titleBarOverlay("default"),
+            }
+          }
+        } else if (features.startsWith("file")) {
+          let u = features.replace("file://", "")
+          shell.showItemInFolder(u)
+          return { action: 'deny' };
+        } else {
+          shell.openExternal(url);
+          return { action: 'deny' };
+        }
+      } else {
+        if (features.startsWith("file")) {
+          let u = features.replace("file://", "")
+          shell.showItemInFolder(u)
+          return { action: 'deny' };
+        } else {
+          shell.openExternal(url);
+          return { action: 'deny' };
+        }
+      }
     }
+
+//    if (origin === root_url) {
+//      // if the origin is the same as pinokio, open in pinokio
+//      // otherwise open in external browser
+//      if (features) {
+//        if (features.startsWith("app") || features.startsWith("self")) {
+//          return {
+//            action: 'allow',
+//            outlivesOpener: true,
+//            overrideBrowserWindowOptions: {
+//              width: (params.get("width") ? parseInt(params.get("width")) : width),
+//              height: (params.get("height") ? parseInt(params.get("height")) : height),
+//              x: x + 30,
+//              y: y + 30,
+//
+//              parent: null,
+//              titleBarStyle : "hidden",
+//              titleBarOverlay : titleBarOverlay("default"),
+//            }
+//          }
+//        } else if (features.startsWith("file")) {
+//          let u = features.replace("file://", "")
+//          shell.showItemInFolder(u)
+//          return { action: 'deny' };
+//        } else {
+//          return { action: 'deny' };
+//        }
+//      } else {
+//        if (features.startsWith("file")) {
+//          let u = features.replace("file://", "")
+//          shell.showItemInFolder(u)
+//          return { action: 'deny' };
+//        } else {
+//          shell.openExternal(url);
+//          return { action: 'deny' };
+//        }
+//      }
+//    } else {
+//      if (features.startsWith("file")) {
+//        let u = features.replace("file://", "")
+//        shell.showItemInFolder(u)
+//        return { action: 'deny' };
+//      } else {
+//        shell.openExternal(url);
+//        return { action: 'deny' };
+//      }
+//    }
   });
 }
 const getWinState = (url, options) => {
@@ -180,8 +266,11 @@ if (!gotTheLock) {
       mainWindow.focus()
     }
     let url = argv.pop()
-    let u = new URL(url).search
-    mainWindow.loadURL(`${root_url}${u}`)
+    //let u = new URL(url).search
+    let u = url.replace(/pinokio:[\/]+/, "")
+    if (BrowserWindow.getAllWindows().length === 0 || !mainWindow) createWindow(PORT)
+    mainWindow.focus()
+    mainWindow.loadURL(`${root_url}/pinokio/${u}`)
   })
 
   // Create mainWindow, load the rest of the app, etc...
@@ -232,6 +321,15 @@ if (!gotTheLock) {
         }
       }
     })
+    app.on('open-url', (event, url) => {
+      console.log("url", url)
+      let u = url.replace(/pinokio:[\/]+/, "")
+  //    let u = new URL(url).search
+  //    console.log("u", u)
+      if (BrowserWindow.getAllWindows().length === 0 || !mainWindow) createWindow(PORT)
+      mainWindow.focus()
+      mainWindow.loadURL(`${root_url}/pinokio/${u}`)
+    })
 
     let all = BrowserWindow.getAllWindows()
     for(win of all) {
@@ -248,8 +346,4 @@ if (!gotTheLock) {
     splash.close();
   })
 
-  app.on('open-url', (event, url) => {
-    let u = new URL(url).search
-    mainWindow.loadURL(`${root_url}${u}`)
-  })
 }
