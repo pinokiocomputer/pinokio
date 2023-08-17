@@ -17,16 +17,9 @@ The main features of this "Pinokio Browser" are:
 - Focus on AI applications and machine learning
 
 
-![image](https://github.com/ogerly/pinokio-browser/assets/1324583/50c2bcce-d25f-44bf-a6d9-d13e0cd80a83)
-## Tutorial Video: https://youtu.be/mB_bZC8pMDA
-
-
-![image](https://github.com/ogerly/pinokio-browser/assets/1324583/0db56fb4-bb95-40ba-9a3d-e3773bd9e8a0)
-## Tutorial Video: https://youtu.be/GPc2sJ-F0BU
- 
 # Installing Pinokio 
 
-## Linux
+## Linux, Mac, Windows
 
 ### npm
 
@@ -44,42 +37,6 @@ yarn build
 yarn start
 ```
 
-## Mac
-
-### npm
-
-```bash
-npm install
-npm run build
-npm run start
-```
-
-### yarn
-
-```bash
-yarn install 
-yarn build
-yarn start
-```
-
-## Windows
-
-### npm
-
-```bash
-npm install
-npm run build
-npm run start
-```
-
-### yarn
-
-```bash
-yarn install
-yarn build 
-yarn start
-```
-
 The main steps:
 
 - Install dependencies with `npm install` or `yarn install`
@@ -88,6 +45,14 @@ The main steps:
 
 These steps should work on Linux, Mac and Windows as long as npm or yarn is installed.
 
+
+![image](https://github.com/ogerly/pinokio-browser/assets/1324583/50c2bcce-d25f-44bf-a6d9-d13e0cd80a83)
+## Tutorial Video: https://youtu.be/mB_bZC8pMDA
+
+
+![image](https://github.com/ogerly/pinokio-browser/assets/1324583/0db56fb4-bb95-40ba-9a3d-e3773bd9e8a0)
+## Tutorial Video: https://youtu.be/GPc2sJ-F0BU
+ 
 
 ________
 
