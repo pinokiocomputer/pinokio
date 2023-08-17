@@ -1,3 +1,89 @@
+# pinokio-browser 
+
+### A browser to use various AI for text, image, audio
+
+The main features of this "Pinokio Browser" are:
+
+- Installation and execution of applications and AI models with one click
+
+- Access to a library of preconfigured scripts
+
+- Programmatic control of installed applications
+
+- Support for different ML models and frameworks 
+
+- Web-based interface
+
+- Focus on AI applications and machine learning
+
+ 
+# Installing Pinokio 
+
+## Linux
+
+### npm
+
+```bash
+npm install
+npm run build
+npm run start
+```
+
+### yarn
+
+```bash  
+yarn install
+yarn build
+yarn start
+```
+
+## Mac
+
+### npm
+
+```bash
+npm install
+npm run build
+npm run start
+```
+
+### yarn
+
+```bash
+yarn install 
+yarn build
+yarn start
+```
+
+## Windows
+
+### npm
+
+```bash
+npm install
+npm run build
+npm run start
+```
+
+### yarn
+
+```bash
+yarn install
+yarn build 
+yarn start
+```
+
+The main steps:
+
+- Install dependencies with `npm install` or `yarn install`
+- Build the app with `npm run build` or `yarn build`
+- Start the app with `npm run start` or `yarn start`
+
+These steps should work on Linux, Mac and Windows as long as npm or yarn is installed.
+
+
+________
+
 # pinokio-browser
 ### Ein Browser um verschiedensten AI zu nutzen, Text, Bild, Audio
 
