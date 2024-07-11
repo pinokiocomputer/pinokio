@@ -1,1 +1,1 @@
-sudo -s xattr -r -d com.apple.quarantine /Applications/Pinokio.app
+sudo -s xattr -d com.apple.quarantine /Applications/Pinokio.app

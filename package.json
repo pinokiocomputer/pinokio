@@ -1,6 +1,6 @@
 {
   "name": "Pinokio",
-  "version": "0.0.123",
+  "version": "1.3.72",
   "homepage": "https://pinokio.computer",
   "description": "pinokio",
   "main": "main.js",
@@ -18,6 +18,7 @@
     "appId": "computer.pinokio",
     "asarUnpack": [
       "node_modules/7zip-bin/**/*",
+      "node_modules/sweetalert2/**/*",
       "node_modules/node-pty-prebuilt-multiarch-cp/**/*"
     ],
     "extraResources": [
@@ -103,9 +104,10 @@
   },
   "license": "MIT",
   "dependencies": {
+    "electron-alert": "^0.1.20",
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^0.0.312"
+    "pinokiod": "^1.3.72"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",

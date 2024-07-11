@@ -1,56 +1,84 @@
-const {app, screen, shell, BrowserWindow, BrowserView, ipcMain, dialog, clipboard } = require('electron')
+const {app, screen, shell, BrowserWindow, BrowserView, ipcMain, dialog, clipboard, session } = require('electron')
 const Store = require('electron-store');
 const windowStateKeeper = require('electron-window-state');
 const fs = require('fs')
 const path = require("path")
 const Pinokiod = require("pinokiod")
 const is_mac = process.platform.startsWith("darwin")
+const packagejson = require("./package.json")
 var mainWindow;
 var root_url;
 var wins = {}
 var pinned = {}
 var launched
-const PORT = 4200
+var theme
+var colors
+//let PORT = 42000
+let PORT = 80
+
+const filter = function (item) {
+  return item.browserName === 'Chrome';
+};
+
 const store = new Store();
 const pinokiod = new Pinokiod({
   port: PORT,
   agent: "electron",
+  version: packagejson.version,
   store
 })
-const titleBarOverlay = (theme) => {
+const titleBarOverlay = (colors) => {
   if (is_mac) {
     return false
   } else {
-    if (theme === "dark") {
-      return {
-        color: "#111",
-        symbolColor: "white"
-      }
-    } else if (theme === "default") {
-      if (launched) {
-        return {
-          color: "#F5F4FA",
-          symbolColor: "black"
-        }
-      } else {
-        return {
-//          color: "white",
-//          symbolColor: "black",
-//          color: "royalblue",
-//          symbolColor: "white"
-          color: "#191919",
-          symbolColor: "white"
-        }
-      }
-    }
-    return {
-      color: "white",
-      symbolColor: "black"
-    }
+    return colors
   }
 }
+function UpsertKeyValue(obj, keyToChange, value) {
+  const keyToChangeLower = keyToChange.toLowerCase();
+  for (const key of Object.keys(obj)) {
+    if (key.toLowerCase() === keyToChangeLower) {
+      // Reassign old key
+      obj[key] = value;
+      // Done
+      return;
+    }
+  }
+  // Insert at end instead
+  obj[keyToChange] = value;
+}
+
+
+//function enable_cors(win) {
+//  win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+//    details.requestHeaders['Origin'] = null;
+//    details.headers['Origin'] = null;
+//    callback({ requestHeaders: details.requestHeaders })
+//  });
+////  win.webContents.session.webRequest.onBeforeSendHeaders(
+////    (details, callback) => {
+////      const { requestHeaders } = details;
+////      UpsertKeyValue(requestHeaders, 'Access-Control-Allow-Origin', ['*']);
+////      callback({ requestHeaders });
+////    },
+////  );
+////
+////  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+////    const { responseHeaders } = details;
+////    UpsertKeyValue(responseHeaders, 'Access-Control-Allow-Origin', ['*']);
+////    UpsertKeyValue(responseHeaders, 'Access-Control-Allow-Headers', ['*']);
+////    callback({
+////      responseHeaders,
+////    });
+////  });
+//}
+
+
 const attach = (event, webContents) => {
   let wc = webContents
+
+
+
   webContents.on('will-navigate', (event, url) => {
     if (!webContents.opened) {
       // The first time this view is being used, set the "opened" to true, and don't do anything
@@ -59,14 +87,137 @@ const attach = (event, webContents) => {
       //  - if it's a remote host, open in external browser
       webContents.opened = true
     } else {
+      console.log("will-navigate", { event, url })
       let host = new URL(url).host
       let localhost = new URL(root_url).host
+      console.log({ host, localhost })
       if (host !== localhost) {
         event.preventDefault()
         shell.openExternal(url);
       }
     }
   })
+//  webContents.session.defaultSession.loadExtension('path/to/unpacked/extension').then(({ id }) => {
+//  })
+
+
+  webContents.session.webRequest.onHeadersReceived((details, callback) => {
+//    console.log("details", details)
+//    console.log("responseHeaders", JSON.stringify(details.responseHeaders, null, 2))
+
+
+
+    // 1. Remove X-Frame-Options
+    if (details.responseHeaders["X-Frame-Options"]) {
+      delete details.responseHeaders["X-Frame-Options"] 
+    } else if (details.responseHeaders["x-frame-options"]) {
+      delete details.responseHeaders["x-frame-options"] 
+    }
+
+    // 2. Remove Content-Security-Policy "frame-ancestors" attribute
+    let csp
+    let csp_type;
+    if (details.responseHeaders["Content-Security-Policy"]) {
+      csp = details.responseHeaders["Content-Security-Policy"]
+      csp_type = 0
+    } else if (details.responseHeaders['content-security-policy']) {
+      csp = details.responseHeaders["content-security-policy"]
+      csp_type = 1
+    }
+
+    if (details.responseHeaders["cross-origin-opener-policy-report-only"]) {
+      delete details.responseHeaders["cross-origin-opener-policy-report-only"]
+    } else if (details.responseHeaders["Cross-Origin-Opener-Policy-Report-Only"]) {
+      delete details.responseHeaders["Cross-Origin-Opener-Policy-Report-Only"]
+    }
+
+
+    if (csp) {
+//      console.log("CSP", csp)
+      // find /frame-ancestors ;$/
+      let new_csp = csp.map((c) => {
+        return c.replaceAll(/frame-ancestors[^;]+;?/gi, "")
+      })
+
+//      console.log("new_csp = ", new_csp)
+
+      const r = {
+        responseHeaders: details.responseHeaders
+      }
+      if (csp_type === 0) {
+        r.responseHeaders["Content-Security-Policy"] = new_csp
+      } else if (csp_type === 1) {
+        r.responseHeaders["content-security-policy"] = new_csp
+      }
+//      console.log("R", JSON.stringify(r, null, 2))
+
+      callback(r)
+    } else {
+//      console.log("RH", details.responseHeaders)
+      callback({
+        responseHeaders: details.responseHeaders
+      })
+    }
+  })
+
+
+
+  webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+
+    let ua = details.requestHeaders['User-Agent']
+//    console.log("User Agent Before", ua)
+    if (ua) {
+      ua = ua.replace(/ pinokio\/[0-9.]+/i, '');
+      ua = ua.replace(/Electron\/.+ /i,'');
+//      console.log("User Agent After", ua)
+      details.requestHeaders['User-Agent'] = ua;
+    }
+
+
+//    console.log("REQ", details)
+//    console.log("HEADER BEFORE", details.requestHeaders)
+//    // Remove all sec-fetch-* headers
+//    for(let key in details.requestHeaders) {
+//      if (key.toLowerCase().startsWith("sec-")) {
+//        delete details.requestHeaders[key]
+//      }
+//    }
+//    console.log("HEADER AFTER", details.requestHeaders)
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
+
+
+//  webContents.session.webRequest.onBeforeSendHeaders(
+//    (details, callback) => {
+//      const { requestHeaders } = details;
+//      UpsertKeyValue(requestHeaders, 'Access-Control-Allow-Origin', ['*']);
+//      callback({ requestHeaders });
+//    },
+//  );
+//
+//  webContents.session.webRequest.onHeadersReceived((details, callback) => {
+//    const { responseHeaders } = details;
+//    UpsertKeyValue(responseHeaders, 'Access-Control-Allow-Origin', ['*']);
+//    UpsertKeyValue(responseHeaders, 'Access-Control-Allow-Headers', ['*']);
+//    callback({
+//      responseHeaders,
+//    });
+//  });
+
+//  webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
+//    //console.log("Before", { details })
+//    if (details.requestHeaders) details.requestHeaders['Origin'] = null;
+//    if (details.requestHeaders) details.requestHeaders['Referer'] = null;
+//    if (details.requestHeaders) details.requestHeaders['referer'] = null;
+//    if (details.headers) details.headers['Origin'] = null;
+//    if (details.headers) details.headers['Referer'] = null;
+//    if (details.headers) details.headers['referer'] = null;
+//
+//    if (details.referrer) details.referrer = null
+//    //console.log("After", { details })
+//    callback({ requestHeaders: details.requestHeaders })
+//  });
+
 //  webContents.on("did-create-window", (parentWindow, details) => {
 //    const view = new BrowserView();
 //    parentWindow.setBrowserView(view);
@@ -75,9 +226,11 @@ const attach = (event, webContents) => {
 //    view.webContents.loadURL(details.url);
 //  })
   webContents.on('did-navigate', (event, url) => {
+    theme = pinokiod.theme
+    colors = pinokiod.colors
     let win = webContents.getOwnerBrowserWindow()
     if (win && win.setTitleBarOverlay && typeof win.setTitleBarOverlay === "function") {
-      const overlay = titleBarOverlay("default")
+      const overlay = titleBarOverlay(colors)
       win.setTitleBarOverlay(overlay)
     }
     launched = true
@@ -102,7 +255,10 @@ const attach = (event, webContents) => {
     // if features exists and it's app or self, open in pinokio
     // otherwise if it's file, 
 
-    if (origin === root_url) {
+    if (features === "browser") {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    } else if (origin === root_url) {
       return {
         action: 'allow',
         outlivesOpener: true,
@@ -114,10 +270,18 @@ const attach = (event, webContents) => {
 
           parent: null,
           titleBarStyle : "hidden",
-          titleBarOverlay : titleBarOverlay("default"),
+          titleBarOverlay : titleBarOverlay(colors),
+          webPreferences: {
+            webSecurity: false,
+            nativeWindowOpen: true,
+            contextIsolation: false,
+            nodeIntegrationInSubFrames: true,
+            preload: path.join(__dirname, 'preload.js')
+          },
         }
       }
     } else {
+      console.log({ features, url })
       if (features) {
         if (features.startsWith("app") || features.startsWith("self")) {
           return {
@@ -131,7 +295,15 @@ const attach = (event, webContents) => {
 
               parent: null,
               titleBarStyle : "hidden",
-              titleBarOverlay : titleBarOverlay("default"),
+              titleBarOverlay : titleBarOverlay(colors),
+              webPreferences: {
+                webSecurity: false,
+                nativeWindowOpen: true,
+                contextIsolation: false,
+                nodeIntegrationInSubFrames: true,
+                preload: path.join(__dirname, 'preload.js')
+              },
+
             }
           }
         } else if (features.startsWith("file")) {
@@ -227,21 +399,60 @@ const createWindow = (port) => {
 
   mainWindow = new BrowserWindow({
     titleBarStyle : "hidden",
-    titleBarOverlay : titleBarOverlay("default"),
+    titleBarOverlay : titleBarOverlay(colors),
     x: mainWindowState.x,
     y: mainWindowState.y,
     width: mainWindowState.width,
     height: mainWindowState.height,
     minWidth: 190,
     webPreferences: {
-      nativeWindowOpen: true
-//      preload: path.join(__dirname, 'preload.js')
+      webSecurity: false,
+      nativeWindowOpen: true,
+      contextIsolation: false,
+      nodeIntegrationInSubFrames: true,
+      preload: path.join(__dirname, 'preload.js')
     },
   })
-  root_url = `http://localhost:${port}`
+//  enable_cors(mainWindow)
+  if("" + port === "80") {
+    root_url = `http://localhost`
+  } else {
+    root_url = `http://localhost:${port}`
+  }
   mainWindow.loadURL(root_url)
 //  mainWindow.maximize();
   mainWindowState.manage(mainWindow);
+
+}
+const loadNewWindow = (url, port) => {
+
+
+  let winState = windowStateKeeper({
+//    file: "index.json",
+    defaultWidth: 1000,
+    defaultHeight: 800
+  });
+
+  let win = new BrowserWindow({
+    titleBarStyle : "hidden",
+    titleBarOverlay : titleBarOverlay(colors),
+    x: winState.x,
+    y: winState.y,
+    width: winState.width,
+    height: winState.height,
+    minWidth: 190,
+    webPreferences: {
+      webSecurity: false,
+      nativeWindowOpen: true,
+      contextIsolation: false,
+      nodeIntegrationInSubFrames: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+  })
+//  enable_cors(win)
+  win.focus()
+  win.loadURL(url)
+  winState.manage(win)
 
 }
 
@@ -256,9 +467,19 @@ if (process.defaultApp) {
 
 const gotTheLock = app.requestSingleInstanceLock()
 
+
 if (!gotTheLock) {
   app.quit()
 } else {
+  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+    
+      // Prevent having error
+      event.preventDefault()
+      // and continue
+      callback(true)
+
+  })
+
   app.on('second-instance', (event, argv) => {
 
     if (mainWindow) {
@@ -268,39 +489,98 @@ if (!gotTheLock) {
     let url = argv.pop()
     //let u = new URL(url).search
     let u = url.replace(/pinokio:[\/]+/, "")
-    if (BrowserWindow.getAllWindows().length === 0 || !mainWindow) createWindow(PORT)
-    mainWindow.focus()
-    mainWindow.loadURL(`${root_url}/pinokio/${u}`)
+    loadNewWindow(`${root_url}/pinokio/${u}`, PORT)
+//    if (BrowserWindow.getAllWindows().length === 0 || !mainWindow) createWindow(PORT)
+//    mainWindow.focus()
+//    mainWindow.loadURL(`${root_url}/pinokio/${u}`)
   })
 
   // Create mainWindow, load the rest of the app, etc...
   app.whenReady().then(async () => {
-    const WIDTH = 300;
-    const HEIGHT = 300;
-    let bounds = screen.getPrimaryDisplay().bounds;
-    let x = Math.ceil(bounds.x + ((bounds.width - WIDTH) / 2));
-    let y = Math.ceil(bounds.y + ((bounds.height - HEIGHT) / 2));
 
+    // PROMPT
+    let promptResponse
+    ipcMain.on('prompt', function(eventRet, arg) {
+      promptResponse = null
+      const point = screen.getCursorScreenPoint()
+      const display = screen.getDisplayNearestPoint(point)
+      const bounds = display.bounds
 
-    // splash window
-    const splash = new BrowserWindow({
-      width: WIDTH,
-      height: HEIGHT,
-  //    transparent: true, 
-      frame: false, 
-      alwaysOnTop: true,
-      x,
-      y,
-      show: false
-    });
-    splash.type = "splash"
-    splash.loadFile('splash.html');
-    splash.once('ready-to-show', () => {
-      splash.show()
+//      const bounds = focused.getBounds()
+      let promptWindow = new BrowserWindow({
+        x: bounds.x + bounds.width/2 - 200,
+        y: bounds.y + bounds.height/2 - 60,
+        width: 400,
+        height: 120,
+        //width: 1000,
+        //height: 500,
+        show: false,
+        resizable: false,
+//        movable: false,
+//        alwaysOnTop: true,
+        frame: false,
+        webPreferences: {
+          webSecurity: false,
+          nativeWindowOpen: true,
+          contextIsolation: false,
+          nodeIntegrationInSubFrames: true,
+          preload: path.join(__dirname, 'preload.js')
+        },
+      })
+      arg.val = arg.val || ''
+      const promptHtml = `<html><body><form><label for="val">${arg.title}</label>
+<input id="val" value="${arg.val}" autofocus />
+<button id='ok'>OK</button>
+<button id='cancel'>Cancel</button></form>
+<style>body {font-family: sans-serif;} form {padding: 5px; } button {float:right; margin-left: 10px;} label { display: block; margin-bottom: 5px; width: 100%; } input {margin-bottom: 10px; padding: 5px; width: 100%; display:block;}</style>
+<script>
+document.querySelector("#cancel").addEventListener("click", (e) => {
+  debugger
+  e.preventDefault()
+  e.stopPropagation()
+  window.close()
+})
+document.querySelector("form").addEventListener("submit", (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  debugger
+  window.electronAPI.send('prompt-response', document.querySelector("#val").value)
+  window.close()
+})
+</script></body></html>`
+
+//      promptWindow.loadFile("prompt.html")
+      promptWindow.loadURL('data:text/html,' + encodeURIComponent(promptHtml))
+      promptWindow.show()
+      promptWindow.on('closed', function() {
+        console.log({ promptResponse })
+        debugger
+        eventRet.returnValue = promptResponse
+        promptWindow = null
+      })
+
+    })
+    ipcMain.on('prompt-response', function(event, arg) {
+      if (arg === ''){ arg = null }
+      console.log("prompt-response", { arg})
+      promptResponse = arg
     })
 
-    await pinokiod.start(PORT)
-    splash.hide();
+
+    await pinokiod.start({
+      browser: {
+        clearCache: async () => {
+          console.log('clear cache', session.defaultSession)
+          await session.defaultSession.clearStorageData()
+          console.log("cleared")
+        }
+      }
+    })
+    PORT = pinokiod.port
+
+    theme = pinokiod.theme
+    colors = pinokiod.colors
+
 
     app.on('web-contents-created', attach)
     app.on('activate', function () {
@@ -312,7 +592,7 @@ if (!gotTheLock) {
     app.on('browser-window-created', (event, win) => {
       if (win.type !== "splash") {
         if (win.setTitleBarOverlay) {
-          const overlay = titleBarOverlay("default")
+          const overlay = titleBarOverlay(colors)
           try {
             win.setTitleBarOverlay(overlay)
           } catch (e) {
@@ -322,20 +602,26 @@ if (!gotTheLock) {
       }
     })
     app.on('open-url', (event, url) => {
-      console.log("url", url)
       let u = url.replace(/pinokio:[\/]+/, "")
   //    let u = new URL(url).search
   //    console.log("u", u)
-      if (BrowserWindow.getAllWindows().length === 0 || !mainWindow) createWindow(PORT)
-      mainWindow.focus()
-      mainWindow.loadURL(`${root_url}/pinokio/${u}`)
+      loadNewWindow(`${root_url}/pinokio/${u}`, PORT)
+
+//      if (BrowserWindow.getAllWindows().length === 0 || !mainWindow) createWindow(PORT)
+//      const topWindow = BrowserWindow.getFocusedWindow();
+//      console.log("top window", topWindow)
+//      //mainWindow.focus()
+//      //mainWindow.loadURL(`${root_url}/pinokio/${u}`)
+//      topWindow.focus()
+//      topWindow.loadURL(`${root_url}/pinokio/${u}`)
     })
+//    app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors')
 
     let all = BrowserWindow.getAllWindows()
     for(win of all) {
       try {
         if (win.setTitleBarOverlay) {
-          const overlay = titleBarOverlay("default")
+          const overlay = titleBarOverlay(colors)
           win.setTitleBarOverlay(overlay)
         }
       } catch (e) {
@@ -343,7 +629,6 @@ if (!gotTheLock) {
       }
     }
     createWindow(PORT)
-    splash.close();
   })
 
 }
