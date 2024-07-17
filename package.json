@@ -1,6 +1,6 @@
 {
   "name": "Pinokio",
-  "version": "1.3.72",
+  "version": "2.0.2",
   "homepage": "https://pinokio.computer",
   "description": "pinokio",
   "main": "main.js",
@@ -107,7 +107,7 @@
     "electron-alert": "^0.1.20",
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^1.3.72"
+    "pinokiod": "^2.0.2"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",

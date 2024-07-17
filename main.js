@@ -4,8 +4,10 @@ const windowStateKeeper = require('electron-window-state');
 const fs = require('fs')
 const path = require("path")
 const Pinokiod = require("pinokiod")
+const os = require('os')
 const is_mac = process.platform.startsWith("darwin")
 const packagejson = require("./package.json")
+const platform = os.platform()
 var mainWindow;
 var root_url;
 var wins = {}
@@ -14,7 +16,7 @@ var launched
 var theme
 var colors
 //let PORT = 42000
-let PORT = 80
+let PORT = (platform === 'linux' ? 42000 : 80)
 
 const filter = function (item) {
   return item.browserName === 'Chrome';
