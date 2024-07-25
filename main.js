@@ -15,8 +15,9 @@ var pinned = {}
 var launched
 var theme
 var colors
+let PORT
 //let PORT = 42000
-let PORT = (platform === 'linux' ? 42000 : 80)
+//let PORT = (platform === 'linux' ? 42000 : 80)
 
 const filter = function (item) {
   return item.browserName === 'Chrome';
@@ -24,7 +25,7 @@ const filter = function (item) {
 
 const store = new Store();
 const pinokiod = new Pinokiod({
-  port: PORT,
+//  port: PORT,
   agent: "electron",
   version: packagejson.version,
   store

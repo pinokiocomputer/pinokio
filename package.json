@@ -1,6 +1,6 @@
 {
   "name": "Pinokio",
-  "version": "2.0.2",
+  "version": "2.1.14",
   "homepage": "https://pinokio.computer",
   "description": "pinokio",
   "main": "main.js",
@@ -104,10 +104,9 @@
   },
   "license": "MIT",
   "dependencies": {
-    "electron-alert": "^0.1.20",
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^2.0.2"
+    "pinokiod": "^2.1.14"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
