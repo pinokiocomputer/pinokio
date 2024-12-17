@@ -90,10 +90,9 @@ const attach = (event, webContents) => {
       //  - if it's a remote host, open in external browser
       webContents.opened = true
     } else {
-      console.log("will-navigate", { event, url })
+//      console.log("will-navigate", { event, url })
       let host = new URL(url).host
       let localhost = new URL(root_url).host
-      console.log({ host, localhost })
       if (host !== localhost) {
         event.preventDefault()
         shell.openExternal(url);
@@ -590,7 +589,17 @@ document.querySelector("form").addEventListener("submit", (e) => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow(PORT)
     })
     app.on('window-all-closed', function () {
-      if (process.platform !== 'darwin') app.quit()
+      console.log("window-all-closed")
+      if (process.platform !== 'darwin') {
+        // Reset all shells before quitting
+        pinokiod.kernel.shell.reset()
+        // wait 1 second before quitting the app
+        // otherwise the app.quit() fails because the subprocesses are running
+        setTimeout(() => {
+          console.log("app.quit()")
+          app.quit()
+        }, 1000)
+      }
     })
     app.on('browser-window-created', (event, win) => {
       if (win.type !== "splash") {

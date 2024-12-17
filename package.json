@@ -1,6 +1,6 @@
 {
   "name": "Pinokio",
-  "version": "2.1.14",
+  "version": "3.0.26",
   "homepage": "https://pinokio.computer",
   "description": "pinokio",
   "main": "main.js",
@@ -17,10 +17,12 @@
   "build": {
     "appId": "computer.pinokio",
     "asarUnpack": [
+      "node_modules/go-get-folder-size/**/*",
       "node_modules/7zip-bin/**/*",
       "node_modules/sweetalert2/**/*",
-      "node_modules/node-pty-prebuilt-multiarch-cp/**/*"
+      "node_modules/@cocktailpeanut/**/*"
     ],
+    "nsis": { "include": "build/installer.nsh" },
     "extraResources": [
       "./script/**"
     ],
@@ -106,7 +108,7 @@
   "dependencies": {
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^2.1.14"
+    "pinokiod": "^3.0.26"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
