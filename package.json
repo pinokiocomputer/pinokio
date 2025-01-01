@@ -1,6 +1,6 @@
 {
   "name": "Pinokio",
-  "version": "3.0.26",
+  "version": "3.2.0",
   "homepage": "https://pinokio.computer",
   "description": "pinokio",
   "main": "main.js",
@@ -9,6 +9,7 @@
   "scripts": {
     "start": "electron .",
     "pack": "./node_modules/.bin/electron-builder --dir",
+    "eject": "hdiutil info | grep '/dev/disk' | awk '{print $1}' | xargs -I {} hdiutil detach {}",
     "dist": "npm run monkeypatch && export SNAPCRAFT_BUILD_ENVIRONMENT=host && export SNAP_DESTRUCTIVE_MODE='true' && ./node_modules/.bin/electron-builder -mwl && npm run zip",
     "zip": "node script/zip",
     "monkeypatch": "cp temp/yarn.js node_modules/app-builder-lib/out/util/yarn.js && cp temp/rebuild.js node_modules/@electron/rebuild/lib/src/rebuild.js",
@@ -35,21 +36,15 @@
       }
     ],
     "dmg": {
-      "background": "./assets/background.png",
+      "background": "./assets/background.gif",
       "contents": [
         {
-          "x": 130,
-          "y": 250
+          "x": 250,
+          "y": 150
         },
         {
-          "x": 410,
-          "y": 80,
-          "type": "file",
-          "path": "./script/patch.command"
-        },
-        {
-          "x": 410,
-          "y": 250,
+          "x": 550,
+          "y": 150,
           "type": "link",
           "path": "/Applications"
         }
@@ -108,7 +103,7 @@
   "dependencies": {
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.0.26"
+    "pinokiod": "^3.2.0"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",

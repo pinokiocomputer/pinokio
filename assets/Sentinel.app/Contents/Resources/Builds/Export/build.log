@@ -1,0 +1,20 @@
+✓ Switched active account for github.com to alienator88
+github.com
+  ✓ Logged in to github.com account alienator88 (keyring)
+  - Active account: true
+  - Git operations protocol: ssh
+  - Token: gho_************************************
+  - Token scopes: 'admin:public_key', 'gist', 'read:org', 'repo'
+
+  ✓ Logged in to github.com account alin-strongdm (keyring)
+  - Active account: false
+  - Git operations protocol: ssh
+  - Token: gho_************************************
+  - Token scopes: 'admin:public_key', 'gist', 'read:org', 'repo'
+All identities removed.
+Identity added: /Users/alin/.ssh/id_ed25519_personal (lupascu.marius@gmail.com)
+Loaded SSH keys:
+256 SHA256:ogYvK3FE9zzK3OC+c1IGvZ2GLbEP/M7gqCUdbCPbvjg lupascu.marius@gmail.com (ED25519)
+Testing SSH access to GitHub:
+Hi alienator88! You've successfully authenticated, but GitHub does not provide shell access.
+Building and archiving the app...
