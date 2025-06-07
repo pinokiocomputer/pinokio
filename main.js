@@ -25,7 +25,18 @@ const filter = function (item) {
 
 const store = new Store();
 const pinokiod = new Pinokiod({
-//  port: PORT,
+  newsfeed: (gitRemote) => {
+    return `https://pinokiocomputer.github.io/home/item?uri=${gitRemote}&display=feed`
+  },
+  profile: (gitRemote) => {
+    return `https://pinokiocomputer.github.io/home/item?uri=${gitRemote}&display=profile`
+  },
+  site: "https://pinokiocomputer.github.io/home",
+  discover_dark: "https://pinokiocomputer.github.io/home/app?theme=dark",
+  discover_light: "https://pinokiocomputer.github.io/home/app",
+  portal: "https://pinokiocomputer.github.io/home/portal",
+  docs: "https://pinokiocomputer.github.io/program.pinokio.computer",
+  install: "https://pinokiocomputer.github.io/program.pinokio.computer/#/?id=install",
   agent: "electron",
   version: packagejson.version,
   store
@@ -588,6 +599,13 @@ document.querySelector("form").addEventListener("submit", (e) => {
     app.on('activate', function () {
       if (BrowserWindow.getAllWindows().length === 0) createWindow(PORT)
     })
+    app.on('before-quit', function(e) {
+      if (pinokiod.kernel.kill) {
+        e.preventDefault()
+        console.log('Cleaning up before quit', process.pid);
+        pinokiod.kernel.kill()
+      }
+    });
     app.on('window-all-closed', function () {
       console.log("window-all-closed")
       if (process.platform !== 'darwin') {
