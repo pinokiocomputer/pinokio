@@ -18,7 +18,7 @@ jobs:
       - name: Install Node.js, NPM and Yarn
         uses: actions/setup-node@v1
         with:
-          node-version: 18
+          node-version: 22
 
       - name: Build/release Electron app
         uses: samuelmeuli/action-electron-builder@v1.6.0
