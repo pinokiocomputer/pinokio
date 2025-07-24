@@ -127,6 +127,6 @@
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
     "electron": "^23.1.2",
-    "electron-builder": "^24.0.0"
+    "electron-builder": "^26.0.12"
   }
 }
