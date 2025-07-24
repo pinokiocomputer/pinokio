@@ -11,6 +11,10 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
         #os: [windows-latest]
 
+    outputs:
+      artifact-id: ${{ steps.electron-builder.outputs.artifact-id }}
+
+
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v1
@@ -21,6 +25,7 @@ jobs:
           node-version: 22
 
       - name: Build/release Electron app
+        id: electron-builder
         uses: samuelmeuli/action-electron-builder@v1.6.0
         with:
           # GitHub token, automatically provided to the action
@@ -84,7 +89,7 @@ jobs:
           organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
           project-slug: 'pinokio'
           signing-policy-slug: 'test-signing'
-          github-artifact-id: '${{ steps.upload-unsigned-artifact-windows.outputs.artifact-id }}'
+          github-artifact-id: '${{ needs.build.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: './signed-windows'
           parameters: |
