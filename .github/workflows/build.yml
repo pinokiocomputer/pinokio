@@ -67,6 +67,7 @@ jobs:
   publish:
     needs: [build, sign-windows]
     runs-on: ubuntu-latest
+    steps:
 
       - name: Get package.json version
         id: get_version
