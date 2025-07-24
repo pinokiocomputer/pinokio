@@ -51,6 +51,9 @@ jobs:
           path: dist-linux
 
   sign-windows:
+    strategy:
+      matrix:
+        os: [windows-latest]
 
     needs: build
     runs-on: windows-latest
@@ -112,21 +115,17 @@ jobs:
 
       # Release the macOS and Linux binaries
       - name: Publish GitHub Release (Mac)
-#        if: matrix.os == 'mac-latest'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Releasing version $PACKAGE_VERSION for ${{ matrix.os }}"
           gh release upload "v$PACKAGE_VERSION" dist-darwin/* --clobber
 
       - name: Publish GitHub Release (Linux)
-#        if: matrix.os == 'linux-latest'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Releasing version $PACKAGE_VERSION for ${{ matrix.os }}"
           gh release upload "v$PACKAGE_VERSION" dist-linux/* --clobber
 
 
