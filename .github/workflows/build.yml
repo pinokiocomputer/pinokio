@@ -52,6 +52,11 @@ jobs:
           parameters: |
             version: ${{ toJSON(github.ref_name) }}
 
+      - name: Get package.json version
+        id: get_version
+        shell: bash
+        run: echo "PACKAGE_VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+
       - name: Create GitHub Release
         id: create_release
         uses: actions/create-release@v1
@@ -66,10 +71,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "Releasing version $VERSION"
-          gh release create "v$VERSION" ./signed/* \
-            --title "Release v$VERSION" \
-            --notes "Pinokio version $VERSION."
+          echo "Releasing version $PACKAGE_VERSION"
+          gh release create "v$PACKAGE_VERSION" ./signed/* \
+            --title "Release v$PACKAGE_VERSION" \
+            --notes "Pinokio version $PACKAGE_VERSION."
 
       - run: echo "Build completed"
