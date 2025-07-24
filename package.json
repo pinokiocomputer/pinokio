@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.19.110",
+  "version": "3.19.111",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -26,6 +26,9 @@
   "build": {
     "appId": "computer.pinokio",
     "afterPack": "chmod.js",
+    "directories": {
+      "output": "dist-${platform}"
+    },
     "artifactName": "Pinokio-Installer.${ext}",
     "asarUnpack": [
       "node_modules/go-get-folder-size/**/*",
@@ -119,7 +122,7 @@
   "dependencies": {
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.19.110"
+    "pinokiod": "^3.19.111"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
