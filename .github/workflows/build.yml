@@ -3,7 +3,7 @@ name: Build/release
 on: push
 
 jobs:
-  release:
+  build:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -33,10 +33,13 @@ jobs:
           #release: true
           release: false
 
-      - name: Get package.json version
-        id: get_version
-        shell: bash
-        run: echo "PACKAGE_VERSION=$(node -p 'require("./package.json").version')" >> $GITHUB_ENV
+  sign-windows:
+
+    needs: build
+    runs-on: windows-latest
+    if: ${{ contains(needs.build.outputs['matrix.os'], 'windows-latest') }}
+    steps:
+
 
       # Upload for windows
       - name: upload-unsigned-artifact
@@ -60,6 +63,15 @@ jobs:
           output-artifact-directory: './signed'
           parameters: |
             version: ${{ toJSON(github.ref_name) }}
+
+  publish:
+    needs: [build, sign-windows]
+    runs-on: ubuntu-latest
+
+      - name: Get package.json version
+        id: get_version
+        shell: bash
+        run: echo "PACKAGE_VERSION=$(node -p 'require("./package.json").version')" >> $GITHUB_ENV
 
       # Release the Windows Signed Binary
       - name: Publish GitHub Release with gh
