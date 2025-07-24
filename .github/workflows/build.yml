@@ -72,7 +72,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Releasing version $PACKAGE_VERSION"
-          gh release create "v$PACKAGE_VERSION" ./signed/* \
+          gh release create "v$PACKAGE_VERSION" ./signed/*.zip \
             --title "Release v$PACKAGE_VERSION" \
             --notes "Pinokio version $PACKAGE_VERSION."
 
