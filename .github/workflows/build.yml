@@ -62,10 +62,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish GitHub Release with gh
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
+          echo "Releasing version $VERSION"
           gh release create "v$VERSION" ./signed/* \
             --title "Release v$VERSION" \
             --notes "Pinokio version $VERSION."
