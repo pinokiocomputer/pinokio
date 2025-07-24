@@ -57,14 +57,14 @@ jobs:
         shell: bash
         run: echo "PACKAGE_VERSION=$(node -p 'require("./package.json").version')" >> $GITHUB_ENV
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: v${{ env.PACKAGE_VERSION }}
-          release_name: "Release v${{ env.PACKAGE_VERSION }}"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      - name: Create GitHub Release
+#        id: create_release
+#        uses: actions/create-release@v1
+#        with:
+#          tag_name: v${{ env.PACKAGE_VERSION }}
+#          release_name: "Release v${{ env.PACKAGE_VERSION }}"
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish GitHub Release with gh
         shell: bash
