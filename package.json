@@ -26,6 +26,7 @@
   "build": {
     "appId": "computer.pinokio",
     "afterPack": "chmod.js",
+    "artifactName": "Pinokio-Installer.${ext}",
     "asarUnpack": [
       "node_modules/go-get-folder-size/**/*",
       "node_modules/7zip-bin/**/*",
