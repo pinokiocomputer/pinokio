@@ -37,9 +37,7 @@ jobs:
 
     needs: build
     runs-on: windows-latest
-    if: ${{ contains(needs.build.outputs['matrix.os'], 'windows-latest') }}
     steps:
-
 
       # Upload for windows
       - name: upload-unsigned-artifact
