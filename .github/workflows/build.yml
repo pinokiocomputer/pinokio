@@ -33,16 +33,18 @@ jobs:
           #release: true
           release: false
 
-      - name: upload-unsigned-artifact
-        id: upload-unsigned-artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: dist
-
       - name: Get package.json version
         id: get_version
         shell: bash
         run: echo "PACKAGE_VERSION=$(node -p 'require("./package.json").version')" >> $GITHUB_ENV
+
+      # Upload for windows
+      - name: upload-unsigned-artifact
+        if: matrix.os == 'windows-latest'
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: dist
 
       # Sign for windows
       - id: Sign
