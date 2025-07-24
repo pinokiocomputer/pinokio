@@ -34,25 +34,25 @@ jobs:
           release: false
 
       # Upload for windows
-      - name: upload-unsigned-artifact
+      - name: upload-unsigned-artifact-windows
         if: matrix.os == 'windows-latest'
-        id: upload-unsigned-artifact
+        id: upload-unsigned-artifact-windows
         uses: actions/upload-artifact@v4
         with:
           path: dist-win32
 
       # Upload for mac
-      - name: upload-unsigned-artifact
+      - name: upload-unsigned-artifact-mac
         if: matrix.os == 'mac-latest'
-        id: upload-unsigned-artifact
+        id: upload-unsigned-artifact-mac
         uses: actions/upload-artifact@v4
         with:
           path: dist-darwin
 
       # Upload for linux
-      - name: upload-unsigned-artifact
+      - name: upload-unsigned-artifact-linux
         if: matrix.os == 'linux-latest'
-        id: upload-unsigned-artifact
+        id: upload-unsigned-artifact-linux
         uses: actions/upload-artifact@v4
         with:
           path: dist-linux
@@ -80,7 +80,7 @@ jobs:
           organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
           project-slug: 'pinokio'
           signing-policy-slug: 'test-signing'
-          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+          github-artifact-id: '${{ steps.upload-unsigned-artifact-windows.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: './signed-windows'
           parameters: |
