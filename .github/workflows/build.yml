@@ -50,7 +50,7 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: './signed'
           parameters: |
-            version: v${{ github.run_number }}
+            version: ${{ toJSON(github.ref_name) }}
 
       - name: Create GitHub Release
         id: create_release
