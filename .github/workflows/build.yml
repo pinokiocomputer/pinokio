@@ -3,17 +3,8 @@ name: Build/release
 on: push
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        #os: [windows-latest]
-
-    outputs:
-      windows-artifact-id: ${{ steps.upload-signed-artifact-windows.outputs.artifact-id }}
-
+  windows:
+    runs-on: windows-latest
 
     steps:
       - name: Check out Git repository
@@ -38,50 +29,14 @@ jobs:
           #release: true
           release: false
 
-
-      # Upload for mac
-      - name: upload-unsigned-artifact-mac
-        if: matrix.os == 'mac-latest'
-        id: upload-unsigned-artifact-mac
-        uses: actions/upload-artifact@v4
-        with:
-          path: dist-darwin
-
-      # Upload for linux
-      - name: upload-unsigned-artifact-linux
-        if: matrix.os == 'linux-latest'
-        id: upload-unsigned-artifact-linux
-        uses: actions/upload-artifact@v4
-        with:
-          path: dist-linux
-
       # Upload for windows
-      - name: upload-unsigned-artifact-windows
+      - name: upload-unsigned-artifact
         if: matrix.os == 'windows-latest'
-        id: upload-unsigned-artifact-windows
+        id: upload-unsigned-artifact
         uses: actions/upload-artifact@v4
         with:
           path: dist-win32
 
-
-  sign-windows:
-    strategy:
-      matrix:
-        os: [windows-latest]
-
-    needs: build
-    runs-on: windows-latest
-    steps:
-
-#      # Upload for windows
-#      - name: upload-unsigned-artifact
-#        if: matrix.os == 'windows-latest'
-#        id: upload-unsigned-artifact
-#        uses: actions/upload-artifact@v4
-#        with:
-#          path: dist
-
-      # Sign for windows
       - id: Sign
         if: matrix.os == 'windows-latest'
         uses: signpath/github-action-submit-signing-request@v1.1
@@ -95,9 +50,57 @@ jobs:
           output-artifact-directory: './signed-windows'
           parameters: |
             version: ${{ toJSON(github.ref_name) }}
+  mac:
+    runs-on: mac-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 22
+
+      - name: Build/release Electron app
+        id: electron-builder
+        uses: samuelmeuli/action-electron-builder@v1.6.0
+        with:
+          # GitHub token, automatically provided to the action
+          # (No need to define this secret in the repo settings)
+          github_token: ${{ secrets.github_token }}
+
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          #release: true
+          release: false
+  linux:
+    runs-on: linux-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 22
+
+      - name: Build/release Electron app
+        id: electron-builder
+        uses: samuelmeuli/action-electron-builder@v1.6.0
+        with:
+          # GitHub token, automatically provided to the action
+          # (No need to define this secret in the repo settings)
+          github_token: ${{ secrets.github_token }}
+
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          #release: true
+          release: false
 
   publish:
-    needs: [build, sign-windows]
+    needs: [windows, mac, linux]
     runs-on: ubuntu-latest
     steps:
 
