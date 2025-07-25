@@ -115,6 +115,8 @@ jobs:
     #needs: [windows, mac, linux]
     needs: [mac, linux]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
 
       - name: Check out Git repository
