@@ -5,6 +5,8 @@ on: push
 
 jobs:
   windows:
+    if: false
+
     runs-on: windows-latest
 
     steps:
@@ -127,6 +129,17 @@ jobs:
           name: signed-windows
           path: signed-windows
 
+#      # Release the Windows Signed Binary
+#      - name: Publish GitHub Release with gh
+#        shell: bash
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        run: |
+#          echo "Releasing version $PACKAGE_VERSION"
+#          gh release create "v$PACKAGE_VERSION" ./signed-windows/*.exe \
+#            --title "Release v$PACKAGE_VERSION" \
+#            --notes "Pinokio version $PACKAGE_VERSION."
+
       # Release the Windows Signed Binary
       - name: Publish GitHub Release with gh
         shell: bash
@@ -134,9 +147,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "Releasing version $PACKAGE_VERSION"
-          gh release create "v$PACKAGE_VERSION" ./signed-windows/*.exe \
+          gh release create "v$PACKAGE_VERSION" \
             --title "Release v$PACKAGE_VERSION" \
             --notes "Pinokio version $PACKAGE_VERSION."
+
 
       # Release the macOS and Linux binaries
       - name: Publish GitHub Release (Mac)
