@@ -25,7 +25,7 @@ jobs:
         run: |
           echo "Releasing version $PACKAGE_VERSION"
           gh release create "v$PACKAGE_VERSION" \
-            --title "Release v$PACKAGE_VERSION" \
+            --title "v$PACKAGE_VERSION" \
             --notes "Pinokio version $PACKAGE_VERSION."
   windows:
     if: false
@@ -114,23 +114,22 @@ jobs:
           # If the commit is tagged with a version (e.g. "v1.0.0"),
           # release the app after building
           #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          #release: true
-          release: false
+          release: true
 
-      # Release the macOS and Linux binaries
-      - name: Get package.json version
-        id: get_version
-        shell: bash
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-
-      - name: Publish GitHub Release (Mac)
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "v$PACKAGE_VERSION" dist-darwin/*.* --clobber
+#      # Release the macOS and Linux binaries
+#      - name: Get package.json version
+#        id: get_version
+#        shell: bash
+#        run: |
+#          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+#          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+#
+#      - name: Publish GitHub Release (Mac)
+#        shell: bash
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        run: |
+#          gh release upload "v$PACKAGE_VERSION" dist-darwin/*.* --clobber
 
   linux:
     needs: "create-release"
@@ -157,19 +156,18 @@ jobs:
           # If the commit is tagged with a version (e.g. "v1.0.0"),
           # release the app after building
           #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          #release: true
-          release: false
+          release: true
 
-      - name: Get package.json version
-        id: get_version
-        shell: bash
-        run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-
-      - name: Publish GitHub Release (Linux)
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "v$PACKAGE_VERSION" dist-linux/*.* --clobber
+#      - name: Get package.json version
+#        id: get_version
+#        shell: bash
+#        run: |
+#          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+#          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+#
+#      - name: Publish GitHub Release (Linux)
+#        shell: bash
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        run: |
+#          gh release upload "v$PACKAGE_VERSION" dist-linux/*.* --clobber
