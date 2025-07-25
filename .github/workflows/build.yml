@@ -1,6 +1,7 @@
 name: Build/release
 
-on: push
+#on: push
+on: []
 
 jobs:
   windows:
@@ -35,6 +36,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: dist-win32
+          retention-days: 1
 
       - id: Sign
         uses: signpath/github-action-submit-signing-request@v1.1
@@ -55,6 +57,7 @@ jobs:
         with:
           name: signed-windows
           path: signed-windows
+          retention-days: 1
 
   mac:
     runs-on: macos-latest
