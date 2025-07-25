@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.19.114",
+  "version": "3.19.115",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -122,7 +122,7 @@
   "dependencies": {
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.19.114"
+    "pinokiod": "^3.19.115"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
