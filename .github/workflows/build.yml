@@ -4,6 +4,7 @@ on: push
 #on: workflow_dispatch
 
 jobs:
+
   create-release:
     runs-on: ubuntu-latest
     permissions:
@@ -27,14 +28,12 @@ jobs:
           gh release create "v$PACKAGE_VERSION" --draft \
             --title "v$PACKAGE_VERSION" \
             --notes "Pinokio version $PACKAGE_VERSION."
-  windows:
-    if: false
 
+  windows:
     needs: "create-release"
     runs-on: windows-latest
     permissions:
       contents: write
-
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v1
@@ -48,8 +47,6 @@ jobs:
         id: electron-builder
         uses: samuelmeuli/action-electron-builder@v1.6.0
         with:
-          # GitHub token, automatically provided to the action
-          # (No need to define this secret in the repo settings)
           github_token: ${{ secrets.github_token }}
 
           # If the commit is tagged with a version (e.g. "v1.0.0"),
@@ -78,6 +75,13 @@ jobs:
           output-artifact-directory: './signed-windows'
           parameters: |
             version: ${{ toJSON(github.ref_name) }}
+
+      - name: Get package.json version
+        id: get_version
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
       - name: Publish GitHub Release with gh
         shell: bash
@@ -116,21 +120,6 @@ jobs:
           #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           release: true
 
-#      # Release the macOS and Linux binaries
-#      - name: Get package.json version
-#        id: get_version
-#        shell: bash
-#        run: |
-#          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-#          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-#
-#      - name: Publish GitHub Release (Mac)
-#        shell: bash
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        run: |
-#          gh release upload "v$PACKAGE_VERSION" dist-darwin/*.* --clobber
-
   linux:
     needs: "create-release"
     runs-on: ubuntu-latest
@@ -157,17 +146,3 @@ jobs:
           # release the app after building
           #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           release: true
-
-#      - name: Get package.json version
-#        id: get_version
-#        shell: bash
-#        run: |
-#          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-#          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-#
-#      - name: Publish GitHub Release (Linux)
-#        shell: bash
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        run: |
-#          gh release upload "v$PACKAGE_VERSION" dist-linux/*.* --clobber
