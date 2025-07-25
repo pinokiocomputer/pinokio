@@ -31,21 +31,19 @@ jobs:
 
       # Upload for windows
       - name: upload-unsigned-artifact
-        if: matrix.os == 'windows-latest'
         id: upload-unsigned-artifact
         uses: actions/upload-artifact@v4
         with:
           path: dist-win32
 
       - id: Sign
-        if: matrix.os == 'windows-latest'
         uses: signpath/github-action-submit-signing-request@v1.1
         with:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
           project-slug: 'pinokio'
           signing-policy-slug: 'test-signing'
-          github-artifact-id: '${{ needs.build.outputs.windows-artifact-id }}'
+          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: './signed-windows'
           parameters: |
@@ -112,7 +110,6 @@ jobs:
 
       # Release the Windows Signed Binary
       - name: Publish GitHub Release with gh
-#        if: matrix.os == 'windows-latest'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
