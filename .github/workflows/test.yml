@@ -11,7 +11,11 @@ jobs:
         shell: bash
 #        run: echo "PACKAGE_VERSION=$(node -p 'require("./package.json").version')" >> $GITHUB_ENV
         #run: echo 'PACKAGE_VERSION=$(node -p "require(\"./package.json\").version")' >> $GITHUB_ENV
-        run: echo "PACKAGE_VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+#        run: echo "PACKAGE_VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+
       - name: Print env
         shell: bash
         run: echo $PACKAGE_VERSION
