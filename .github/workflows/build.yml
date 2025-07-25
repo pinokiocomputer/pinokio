@@ -112,7 +112,8 @@ jobs:
           release: false
 
   publish:
-    needs: [windows, mac, linux]
+    #needs: [windows, mac, linux]
+    needs: [mac, linux]
     runs-on: ubuntu-latest
     steps:
 
