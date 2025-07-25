@@ -117,6 +117,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
       - name: Get package.json version
         id: get_version
         shell: bash
