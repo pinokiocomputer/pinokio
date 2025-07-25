@@ -127,13 +127,13 @@ jobs:
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
 
-      - name: Download signed Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: signed-windows
-          path: signed-windows
-
 #      # Release the Windows Signed Binary
+#      - name: Download signed Windows artifact
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: signed-windows
+#          path: signed-windows
+#
 #      - name: Publish GitHub Release with gh
 #        shell: bash
 #        env:
