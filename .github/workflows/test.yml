@@ -6,6 +6,9 @@ jobs:
   print:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Get package.json version
         id: get_version
         shell: bash
