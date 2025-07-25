@@ -130,7 +130,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "v$PACKAGE_VERSION" dist-darwin/* --clobber
+          gh release upload "v$PACKAGE_VERSION" dist-darwin/*.* --clobber
 
   linux:
     needs: "create-release"
@@ -172,4 +172,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "v$PACKAGE_VERSION" dist-linux/* --clobber
+          gh release upload "v$PACKAGE_VERSION" dist-linux/*.* --clobber
