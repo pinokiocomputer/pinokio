@@ -43,7 +43,7 @@ jobs:
           organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
           project-slug: 'pinokio'
           signing-policy-slug: 'test-signing'
-#          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
           wait-for-completion: true
           input-artifact-directory: './dist-win32'
           output-artifact-directory: './signed-windows'
