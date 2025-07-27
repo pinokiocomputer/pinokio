@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.20.1",
+  "version": "3.20.2",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -78,7 +78,8 @@
           ]
         }
       ],
-			"hardenedRuntime": true
+			"hardenedRuntime": true,
+      "notarize": true
     },
     "linux": {
       "maintainer": "Cocktail Peanut <cocktailpeanuts@proton.me>",
@@ -122,7 +123,7 @@
   "dependencies": {
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.20.1"
+    "pinokiod": "^3.20.2"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
