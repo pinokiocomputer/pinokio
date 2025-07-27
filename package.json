@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.20.0",
+  "version": "3.20.1",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -11,11 +11,9 @@
     "start": "electron .",
     "pack": "./node_modules/.bin/electron-builder --dir",
     "eject": "hdiutil info | grep '/dev/disk' | awk '{print $1}' | xargs -I {} hdiutil detach {}",
-
     "l": "docker run --rm -ti -v $PWD:/project -w /project -e SNAPCRAFT_BUILD_ENVIRONMENT=host -e SNAP_DESTRUCTIVE_MODE=true electronuserland/builder bash -lc 'rm -rf node_modules && npm install && npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && ./node_modules/.bin/electron-builder -l'",
     "mw": "rm -rf node_modules && npm install && npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && ./node_modules/.bin/electron-builder -mw && npm run zip",
     "build2": "npm run l && npm run mw",
-
     "dist": "npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && export SNAPCRAFT_BUILD_ENVIRONMENT=host && export SNAP_DESTRUCTIVE_MODE='true' && ./node_modules/.bin/electron-builder -l && npm run zip",
     "dist2": "npm run monkeypatch && export USE_SYSTEM_FPM=true && ./node_modules/.bin/electron-builder install-app-deps && export SNAPCRAFT_BUILD_ENVIRONMENT=host && export SNAP_DESTRUCTIVE_MODE='true' && ./node_modules/.bin/electron-builder -mwl && npm run zip",
     "zip": "node script/zip",
@@ -26,6 +24,7 @@
   "build": {
     "appId": "computer.pinokio",
     "afterPack": "chmod.js",
+		"afterSign": "electron-builder-notarize",
     "directories": {
       "output": "dist-${platform}"
     },
@@ -78,7 +77,8 @@
             "arm64"
           ]
         }
-      ]
+      ],
+			"hardenedRuntime": true
     },
     "linux": {
       "maintainer": "Cocktail Peanut <cocktailpeanuts@proton.me>",
@@ -122,11 +122,12 @@
   "dependencies": {
     "electron-store": "^8.1.0",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.20.0"
+    "pinokiod": "^3.20.1"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
     "electron": "^23.1.2",
-    "electron-builder": "^26.0.18"
+    "electron-builder": "^26.0.18",
+    "electron-builder-notarize": "^1.5.2"
   }
 }

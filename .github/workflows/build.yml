@@ -108,6 +108,14 @@ jobs:
         with:
           node-version: 22
 
+      - name: Prepare for app notarization
+        if: startsWith(matrix.os, 'macos')
+        # Import Apple API key for app notarization on macOS
+        run: |
+          mkdir -p ~/private_keys/
+          echo '${{ secrets.api_key }}' > ~/private_keys/AuthKey_${{ secrets.api_key_id }}.p8
+
+
       - name: Build/release Electron app
         id: electron-builder
         uses: samuelmeuli/action-electron-builder@v1.6.0
@@ -122,6 +130,11 @@ jobs:
           release: true
           mac_certs: ${{ secrets.mac_certs }}
           mac_certs_password: ${{ secrets.mac_certs_password }}
+        env:
+          # macOS notarization API key
+          API_KEY_ID: ${{ secrets.api_key_id }}
+          API_KEY_ISSUER_ID: ${{ secrets.api_key_issuer_id }}
+
 
   linux:
     needs: "create-release"
