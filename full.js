@@ -5,7 +5,7 @@ const path = require("path")
 const Pinokiod = require("pinokiod")
 const os = require('os')
 const is_mac = process.platform.startsWith("darwin")
-const Update = require('./update')
+const Updater = require('./updater')
 const platform = os.platform()
 var mainWindow;
 var root_url;
@@ -24,7 +24,7 @@ const filter = function (item) {
   return item.browserName === 'Chrome';
 };
 
-const update = new Update()
+const updater = new Updater()
 const pinokiod = new Pinokiod(config)
 const titleBarOverlay = (colors) => {
   if (is_mac) {
@@ -581,7 +581,7 @@ document.querySelector("form").addEventListener("submit", (e) => {
         }
       }
     })
-    update.run()
+    updater.run()
     PORT = pinokiod.port
 
     theme = pinokiod.theme

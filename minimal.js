@@ -2,9 +2,9 @@ const { app, Tray, Menu, shell, nativeImage } = require('electron');
 const path = require('path')
 const Pinokiod = require("pinokiod")
 const config = require('./config')
-const Update = require('./update')
+const Updater = require('./updater')
 const pinokiod = new Pinokiod(config)
-const update = new Update()
+const updater = new Updater()
 let tray
 app.whenReady().then(async () => {
   await pinokiod.start({
@@ -23,7 +23,7 @@ app.whenReady().then(async () => {
       }
     }
   })
-  update.run()
+  updater.run()
   if (process.platform === 'darwin') app.dock.hide();
   let icon = nativeImage.createFromPath(path.resolve(process.resourcesPath, "assets/icon_small.png"))
   icon = icon.resize({
