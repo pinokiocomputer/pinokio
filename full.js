@@ -5,6 +5,7 @@ const path = require("path")
 const Pinokiod = require("pinokiod")
 const os = require('os')
 const is_mac = process.platform.startsWith("darwin")
+const Update = require('./update')
 const platform = os.platform()
 var mainWindow;
 var root_url;

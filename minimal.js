@@ -2,6 +2,7 @@ const { app, Tray, Menu, shell, nativeImage } = require('electron');
 const path = require('path')
 const Pinokiod = require("pinokiod")
 const config = require('./config')
+const Update = require('./update')
 const pinokiod = new Pinokiod(config)
 const update = new Update()
 let tray
