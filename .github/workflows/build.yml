@@ -34,83 +34,83 @@ jobs:
             --notes-file RELEASE.md
 #            --notes "Pinokio version $PACKAGE_VERSION."
 
-#  windows:
-#    needs: "create-release"
-#    runs-on: windows-latest
-#    permissions:
-#      contents: write
-#    steps:
-#      - name: Check out Git repository
-#        uses: actions/checkout@v1
-#
-#      - name: Install Node.js, NPM and Yarn
-#        uses: actions/setup-node@v1
-#        with:
-#          node-version: 22
-#
-#      - name: Build/release Electron app
-#        id: electron-builder
-#        uses: samuelmeuli/action-electron-builder@v1.6.0
-#        with:
-#          github_token: ${{ secrets.github_token }}
-#
-#          # If the commit is tagged with a version (e.g. "v1.0.0"),
-#          # release the app after building
-#          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-#          #release: true
-#          release: false
-#          args: --win --dir  # Build win-unpacked only
-#
-#      - name: upload-unsigned-artifact
-#        id: upload-unsigned-artifact
-#        uses: actions/upload-artifact@v4
-#        with:
-#          #path: dist-win32
-#          path: dist-win32/win-unpacked/Pinokio.exe
-#          retention-days: 1
-#
-#      - id: Sign
-#        if: ${{ runner.os == 'Windows' }}
-#        uses: signpath/github-action-submit-signing-request@v1.1
-#        with:
-#          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-#          organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
-#          project-slug: 'pinokio'
-#          signing-policy-slug: 'test-signing'
-#          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
-#          wait-for-completion: true
-#          output-artifact-directory: './signed-windows'
-#          parameters: |
-#            version: ${{ toJSON(github.ref_name) }}
-#
-#      # Replace the unsigned exe with the signed exe
-#      - name: Replace with signed exe
-#        run: |
-#          copy /Y ".\signed-windows\Pinokio.exe" ".\dist\win-unpacked\Pinokio.exe"
-#
-#      # Build the final installer from the signed exe
-#      - name: Build final installer
-#        run: |
-#          yarn run electron-builder --win --prepackaged dist/win-unpacked
-#
-#
-#      - name: Get package.json version
-#        id: get_version
-#        shell: bash
-#        run: |
-#          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-#          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-#
-#      - name: Publish GitHub Release with gh
-#        shell: bash
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        run: |
-#          echo "Releasing version $PACKAGE_VERSION"
-#          #gh release create "v$PACKAGE_VERSION" ./signed-windows/*.exe \
-#          gh release create "v$PACKAGE_VERSION" ./dist/*.exe \
-#            --title "Release v$PACKAGE_VERSION" \
-#            --notes "Pinokio version $PACKAGE_VERSION."
+  windows:
+    needs: "create-release"
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 22
+
+      - name: Build/release Electron app
+        id: electron-builder
+        uses: samuelmeuli/action-electron-builder@v1.6.0
+        with:
+          github_token: ${{ secrets.github_token }}
+
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          #release: true
+          release: false
+          args: --win --dir  # Build win-unpacked only
+
+      - name: upload-unsigned-artifact
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          #path: dist-win32
+          path: dist-win32/win-unpacked/Pinokio.exe
+          retention-days: 1
+
+      - id: Sign
+        if: ${{ runner.os == 'Windows' }}
+        uses: signpath/github-action-submit-signing-request@v1.1
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
+          project-slug: 'pinokio'
+          signing-policy-slug: 'test-signing'
+          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: './signed-windows'
+          parameters: |
+            version: ${{ toJSON(github.ref_name) }}
+
+      # Replace the unsigned exe with the signed exe
+      - name: Replace with signed exe
+        run: |
+          copy /Y ".\signed-windows\Pinokio.exe" ".\dist\win-unpacked\Pinokio.exe"
+
+      # Build the final installer from the signed exe
+      - name: Build final installer
+        run: |
+          yarn run electron-builder --win --prepackaged dist/win-unpacked
+
+
+      - name: Get package.json version
+        id: get_version
+        shell: bash
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+
+      - name: Publish GitHub Release with gh
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Releasing version $PACKAGE_VERSION"
+          #gh release create "v$PACKAGE_VERSION" ./signed-windows/*.exe \
+          gh release create "v$PACKAGE_VERSION" ./dist/*.exe \
+            --title "Release v$PACKAGE_VERSION" \
+            --notes "Pinokio version $PACKAGE_VERSION."
 
   mac:
     needs: "create-release"
