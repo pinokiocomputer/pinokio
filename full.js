@@ -581,7 +581,6 @@ document.querySelector("form").addEventListener("submit", (e) => {
         }
       }
     })
-    updater.run()
     PORT = pinokiod.port
 
     theme = pinokiod.theme
@@ -652,6 +651,7 @@ document.querySelector("form").addEventListener("submit", (e) => {
       }
     }
     createWindow(PORT)
+    updater.run(mainWindow)
   })
 
 }

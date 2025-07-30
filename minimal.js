@@ -6,6 +6,7 @@ const Updater = require('./updater')
 const pinokiod = new Pinokiod(config)
 const updater = new Updater()
 let tray
+let hiddenWindow
 app.whenReady().then(async () => {
   await pinokiod.start({
     onquit: () => {
@@ -23,7 +24,6 @@ app.whenReady().then(async () => {
       }
     }
   })
-  updater.run()
   if (process.platform === 'darwin') app.dock.hide();
   let icon = nativeImage.createFromPath(path.resolve(process.resourcesPath, "assets/icon_small.png"))
   icon = icon.resize({
@@ -43,4 +43,7 @@ app.whenReady().then(async () => {
     tray.popUpContextMenu(contextMenu);
   });
   shell.openExternal("http://localhost:42000");
+  hiddenWindow = new BrowserWindow({ show: false });
+
+  updater.run(hiddenWindow)
 });
