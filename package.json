@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.20.15",
+  "version": "3.20.16",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -28,11 +28,13 @@
     "directories": {
       "output": "dist-${platform}"
     },
-    "publish": [{
-      "provider": "github",
-      "owner": "cocktailpeanutlabs",
-      "repo": "pdeploy"
-    }],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "cocktailpeanutlabs",
+        "repo": "pdeploy"
+      }
+    ],
     "asarUnpack": [
       "node_modules/go-get-folder-size/**/*",
       "node_modules/7zip-bin/**/*",
@@ -125,10 +127,11 @@
   },
   "license": "MIT",
   "dependencies": {
+    "electron-progressbar": "^2.2.1",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.20.15"
+    "pinokiod": "^3.20.16"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
