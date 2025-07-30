@@ -3,6 +3,7 @@ const path = require('path')
 const Pinokiod = require("pinokiod")
 const config = require('./config')
 const pinokiod = new Pinokiod(config)
+const update = new Update()
 let tray
 app.whenReady().then(async () => {
   await pinokiod.start({
@@ -21,6 +22,7 @@ app.whenReady().then(async () => {
       }
     }
   })
+  update.run()
   if (process.platform === 'darwin') app.dock.hide();
   let icon = nativeImage.createFromPath(path.resolve(process.resourcesPath, "assets/icon_small.png"))
   icon = icon.resize({

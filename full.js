@@ -23,6 +23,7 @@ const filter = function (item) {
   return item.browserName === 'Chrome';
 };
 
+const update = new Update()
 const pinokiod = new Pinokiod(config)
 const titleBarOverlay = (colors) => {
   if (is_mac) {
@@ -579,6 +580,7 @@ document.querySelector("form").addEventListener("submit", (e) => {
         }
       }
     })
+    update.run()
     PORT = pinokiod.port
 
     theme = pinokiod.theme
