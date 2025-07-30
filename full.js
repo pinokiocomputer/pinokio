@@ -4,6 +4,7 @@ const fs = require('fs')
 const path = require("path")
 const Pinokiod = require("pinokiod")
 const os = require('os')
+const Updater = require('./updater')
 const is_mac = process.platform.startsWith("darwin")
 const platform = os.platform()
 var mainWindow;
@@ -23,7 +24,7 @@ const filter = function (item) {
   return item.browserName === 'Chrome';
 };
 
-const updater = new global.Updater()
+const updater = new Updater()
 const pinokiod = new Pinokiod(config)
 const titleBarOverlay = (colors) => {
   if (is_mac) {
