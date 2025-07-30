@@ -2,9 +2,8 @@ const { app, Tray, Menu, shell, nativeImage } = require('electron');
 const path = require('path')
 const Pinokiod = require("pinokiod")
 const config = require('./config')
-const Updater = require('./updater')
 const pinokiod = new Pinokiod(config)
-const updater = new Updater()
+const updater = new global.Updater()
 let tray
 app.whenReady().then(async () => {
   await pinokiod.start({
