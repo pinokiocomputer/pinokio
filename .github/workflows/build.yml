@@ -1,6 +1,10 @@
 name: Build/release
 
-on: push
+on:
+  push:
+    branches:
+      - main
+
 #on: workflow_dispatch
 
 jobs:
