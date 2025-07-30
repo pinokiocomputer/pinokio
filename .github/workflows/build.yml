@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           #path: dist-win32
-          path: dist/win-unpacked/Pinokio.exe
+          path: dist-win32/win-unpacked/Pinokio.exe
           retention-days: 1
 
       - id: Sign
