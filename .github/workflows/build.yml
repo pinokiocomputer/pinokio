@@ -86,12 +86,12 @@ jobs:
 #      # Replace the unsigned exe with the signed exe
 #      - name: Replace with signed exe
 #        run: |
-#          copy /Y ".\signed-windows\Pinokio.exe" ".\dist\win-unpacked\Pinokio.exe"
+#          copy /Y ".\signed-windows\Pinokio.exe" ".\dist-win32\win-unpacked\Pinokio.exe"
 
       # Build the final installer from the signed exe
       - name: Build final installer
         run: |
-          yarn run electron-builder --win --prepackaged dist/win-unpacked
+          yarn run electron-builder --win --prepackaged dist-win32/win-unpacked
 
 
       - name: Get package.json version
