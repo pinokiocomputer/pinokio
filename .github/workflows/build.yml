@@ -61,32 +61,34 @@ jobs:
           release: false
           args: --win --dir  # Build win-unpacked only
 
-#      - name: upload-unsigned-artifact
-#        id: upload-unsigned-artifact
-#        uses: actions/upload-artifact@v4
-#        with:
-#          #path: dist-win32
-#          path: dist-win32/win-unpacked/Pinokio.exe
-#          retention-days: 1
-#
-#      - id: Sign
-#        if: ${{ runner.os == 'Windows' }}
-#        uses: signpath/github-action-submit-signing-request@v1.1
-#        with:
-#          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-#          organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
-#          project-slug: 'pinokio'
-#          signing-policy-slug: 'test-signing'
-#          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
-#          wait-for-completion: true
-#          output-artifact-directory: './signed-windows'
-#          parameters: |
-#            version: ${{ toJSON(github.ref_name) }}
-#
-#      # Replace the unsigned exe with the signed exe
-#      - name: Replace with signed exe
-#        run: |
-#          copy /Y ".\signed-windows\Pinokio.exe" ".\dist-win32\win-unpacked\Pinokio.exe"
+### sign start
+      - name: upload-unsigned-artifact
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          #path: dist-win32
+          path: dist-win32/win-unpacked/Pinokio.exe
+          retention-days: 1
+
+      - id: Sign
+        if: ${{ runner.os == 'Windows' }}
+        uses: signpath/github-action-submit-signing-request@v1.1
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
+          project-slug: 'pinokio'
+          signing-policy-slug: 'test-signing'
+          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: './signed-windows'
+          parameters: |
+            version: ${{ toJSON(github.ref_name) }}
+
+      # Replace the unsigned exe with the signed exe
+      - name: Replace with signed exe
+        run: |
+          copy /Y ".\signed-windows\Pinokio.exe" ".\dist-win32\win-unpacked\Pinokio.exe"
+### sign end
 
       # Build the final installer from the signed exe
       - name: Build final installer
