@@ -93,7 +93,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          yarn run electron-builder --win --prepackaged dist-win32/win-unpacked
+          yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish never
 
 
       - name: Get package.json version
