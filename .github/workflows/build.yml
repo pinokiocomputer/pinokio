@@ -62,6 +62,7 @@ jobs:
           args: --win --dir  # Build win-unpacked only
 
 ### sign start
+
       - name: upload-unsigned-artifact
         id: upload-unsigned-artifact
         uses: actions/upload-artifact@v4
@@ -88,6 +89,8 @@ jobs:
       - name: Replace with signed exe
         run: |
           copy /Y ".\signed-windows\Pinokio.exe" ".\dist-win32\win-unpacked\Pinokio.exe"
+        shell: cmd
+
 ### sign end
 
       # Build the final installer from the signed exe
