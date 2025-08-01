@@ -90,6 +90,8 @@ jobs:
 
       # Build the final installer from the signed exe
       - name: Build final installer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           yarn run electron-builder --win --prepackaged dist-win32/win-unpacked
 
