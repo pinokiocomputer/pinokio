@@ -78,7 +78,8 @@ jobs:
           api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
           organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
           project-slug: 'pinokio'
-          signing-policy-slug: 'test-signing'
+          #signing-policy-slug: 'test-signing'
+          signing-policy-slug: 'release-signing'
           github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: './signed-windows'
