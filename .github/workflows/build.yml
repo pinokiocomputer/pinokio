@@ -98,6 +98,8 @@ jobs:
       - name: Build final installer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # disable any auto code-sign discovery
+          DISABLE_CODE_SIGNING: "true"           # electron-builder respects this to skip signing
         run: |
           #yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish never
           yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish always
