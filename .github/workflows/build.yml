@@ -129,7 +129,7 @@ jobs:
           #gh release create "v$PACKAGE_VERSION" ./signed-windows/*.exe \
 
           #gh release upload "v$PACKAGE_VERSION" ./dist-win32/*.exe .dist-win32/latest.yml ./dist-win32/*.exe.blockmap
-          gh release upload "v$PACKAGE_VERSION" ./signed-windows/*.exe ./dist-win32/latest.yml ./dist-win32/*.exe.blockmap
+          gh release upload "v$PACKAGE_VERSION" ./signed-windows/*.exe ./dist-win32/latest.yml ./dist-win32/*.exe.blockmap --clobber
           #gh release create "v$PACKAGE_VERSION" ./dist-win32/*.exe \
           #  --title "Release v$PACKAGE_VERSION" \
           #  --notes "Pinokio version $PACKAGE_VERSION."
