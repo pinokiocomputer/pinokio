@@ -61,48 +61,54 @@ jobs:
           release: false
           args: --win --dir  # Build win-unpacked only
 
-### sign start
-
-      - name: upload-unsigned-artifact
-        id: upload-unsigned-artifact
-        uses: actions/upload-artifact@v4
-        with:
-          #path: dist-win32
-          path: dist-win32/win-unpacked/Pinokio.exe
-          retention-days: 1
-
-      - id: Sign
-        if: ${{ runner.os == 'Windows' }}
-        uses: signpath/github-action-submit-signing-request@v1.1
-        with:
-          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
-          project-slug: 'pinokio'
-          #signing-policy-slug: 'test-signing'
-          signing-policy-slug: 'release-signing'
-          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
-          wait-for-completion: true
-          output-artifact-directory: './signed-windows'
-          parameters: |
-            version: ${{ toJSON(github.ref_name) }}
-
-      # Replace the unsigned exe with the signed exe
-      - name: Replace with signed exe
+      - name: Check contents
         run: |
-          copy /Y ".\signed-windows\Pinokio.exe" ".\dist-win32\win-unpacked\Pinokio.exe"
+          dir dist-win32 \
+          dir dist-win32\\win-unpacked
         shell: cmd
 
-### sign end
+### sign start
 
-      # Build the final installer from the signed exe
-      - name: Build final installer
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # disable any auto code-sign discovery
-#          DISABLE_CODE_SIGNING: "true"           # electron-builder respects this to skip signing
-        run: |
-          #yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish never
-          yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish always
+#      - name: upload-unsigned-artifact
+#        id: upload-unsigned-artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          #path: dist-win32
+#          path: dist-win32/win-unpacked/Pinokio.exe
+#          retention-days: 1
+#
+#      - id: Sign
+#        if: ${{ runner.os == 'Windows' }}
+#        uses: signpath/github-action-submit-signing-request@v1.1
+#        with:
+#          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+#          organization-id: 'd2da0df2-dc12-4516-8222-87178d5ebf3d'
+#          project-slug: 'pinokio'
+#          #signing-policy-slug: 'test-signing'
+#          signing-policy-slug: 'release-signing'
+#          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+#          wait-for-completion: true
+#          output-artifact-directory: './signed-windows'
+#          parameters: |
+#            version: ${{ toJSON(github.ref_name) }}
+#
+#      # Replace the unsigned exe with the signed exe
+#      - name: Replace with signed exe
+#        run: |
+#          copy /Y ".\signed-windows\Pinokio.exe" ".\dist-win32\win-unpacked\Pinokio.exe"
+#        shell: cmd
+#
+#### sign end
+#
+#      # Build the final installer from the signed exe
+#      - name: Build final installer
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+##          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # disable any auto code-sign discovery
+##          DISABLE_CODE_SIGNING: "true"           # electron-builder respects this to skip signing
+#        run: |
+#          #yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish never
+#          yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish always
 
 
 #      - name: Get package.json version
@@ -125,77 +131,77 @@ jobs:
 #          #  --title "Release v$PACKAGE_VERSION" \
 #          #  --notes "Pinokio version $PACKAGE_VERSION."
 
-  mac:
-    needs: "create-release"
-    runs-on: macos-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v1
-
-      - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
-        with:
-          node-version: 22
-
-#      - name: Prepare for app notarization
-#        if: startsWith(matrix.os, 'macos')
-#        # Import Apple API key for app notarization on macOS
-#        run: |
-#          mkdir -p ~/private_keys/
-#          echo '${{ secrets.api_key }}' > ~/private_keys/AuthKey_${{ secrets.api_key_id }}.p8
-
-
-      - name: Build/release Electron app
-        id: electron-builder
-        uses: samuelmeuli/action-electron-builder@v1.6.0
-        with:
-          # GitHub token, automatically provided to the action
-          # (No need to define this secret in the repo settings)
-          github_token: ${{ secrets.github_token }}
-
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
-          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          release: true
-          mac_certs: ${{ secrets.mac_certs }}
-          mac_certs_password: ${{ secrets.mac_certs_password }}
-        env:
-          # macOS notarization API key
-          #API_KEY_ID: ${{ secrets.api_key_id }}
-          #API_KEY_ISSUER_ID: ${{ secrets.api_key_issuer_id }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-
-      - name: Show notarization-error.log
-        if: failure()
-        run: cat dist-darwin/**/notarization-error.log || echo "No notarization-error.log found"
-
-  linux:
-    needs: "create-release"
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v1
-
-      - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
-        with:
-          node-version: 22
-
-      - name: Build/release Electron app
-        id: electron-builder
-        uses: samuelmeuli/action-electron-builder@v1.6.0
-        with:
-          # GitHub token, automatically provided to the action
-          # (No need to define this secret in the repo settings)
-          github_token: ${{ secrets.github_token }}
-
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
-          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          release: true
+#  mac:
+#    needs: "create-release"
+#    runs-on: macos-latest
+#    permissions:
+#      contents: write
+#    steps:
+#      - name: Check out Git repository
+#        uses: actions/checkout@v1
+#
+#      - name: Install Node.js, NPM and Yarn
+#        uses: actions/setup-node@v1
+#        with:
+#          node-version: 22
+#
+##      - name: Prepare for app notarization
+##        if: startsWith(matrix.os, 'macos')
+##        # Import Apple API key for app notarization on macOS
+##        run: |
+##          mkdir -p ~/private_keys/
+##          echo '${{ secrets.api_key }}' > ~/private_keys/AuthKey_${{ secrets.api_key_id }}.p8
+#
+#
+#      - name: Build/release Electron app
+#        id: electron-builder
+#        uses: samuelmeuli/action-electron-builder@v1.6.0
+#        with:
+#          # GitHub token, automatically provided to the action
+#          # (No need to define this secret in the repo settings)
+#          github_token: ${{ secrets.github_token }}
+#
+#          # If the commit is tagged with a version (e.g. "v1.0.0"),
+#          # release the app after building
+#          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+#          release: true
+#          mac_certs: ${{ secrets.mac_certs }}
+#          mac_certs_password: ${{ secrets.mac_certs_password }}
+#        env:
+#          # macOS notarization API key
+#          #API_KEY_ID: ${{ secrets.api_key_id }}
+#          #API_KEY_ISSUER_ID: ${{ secrets.api_key_issuer_id }}
+#          APPLE_ID: ${{ secrets.APPLE_ID }}
+#          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+#          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+#
+#      - name: Show notarization-error.log
+#        if: failure()
+#        run: cat dist-darwin/**/notarization-error.log || echo "No notarization-error.log found"
+#
+#  linux:
+#    needs: "create-release"
+#    runs-on: ubuntu-latest
+#    permissions:
+#      contents: write
+#    steps:
+#      - name: Check out Git repository
+#        uses: actions/checkout@v1
+#
+#      - name: Install Node.js, NPM and Yarn
+#        uses: actions/setup-node@v1
+#        with:
+#          node-version: 22
+#
+#      - name: Build/release Electron app
+#        id: electron-builder
+#        uses: samuelmeuli/action-electron-builder@v1.6.0
+#        with:
+#          # GitHub token, automatically provided to the action
+#          # (No need to define this secret in the repo settings)
+#          github_token: ${{ secrets.github_token }}
+#
+#          # If the commit is tagged with a version (e.g. "v1.0.0"),
+#          # release the app after building
+#          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+#          release: true
