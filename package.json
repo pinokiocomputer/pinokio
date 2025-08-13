@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.33.0",
+  "version": "3.35.0",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -24,7 +24,6 @@
   "build": {
     "appId": "computer.pinokio",
     "afterPack": "chmod.js",
-    "afterSign": "electron-builder-notarize",
     "directories": {
       "output": "dist-${platform}"
     },
@@ -61,6 +60,7 @@
     ],
     "mac": {
       "category": "utility",
+      "afterSign": "electron-builder-notarize",
       "target": [
         {
           "target": "default",
@@ -100,7 +100,6 @@
     },
     "win": {
       "artifactName": "Pinokio.${ext}",
-      "forceCodeSigning": false,
       "target": [
         {
           "target": "nsis",
@@ -117,7 +116,7 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.33.0"
+    "pinokiod": "^3.35.0"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",

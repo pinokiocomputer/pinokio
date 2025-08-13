@@ -98,8 +98,8 @@ jobs:
       - name: Build final installer
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # disable any auto code-sign discovery
-          DISABLE_CODE_SIGNING: "true"           # electron-builder respects this to skip signing
+#          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # disable any auto code-sign discovery
+#          DISABLE_CODE_SIGNING: "true"           # electron-builder respects this to skip signing
         run: |
           #yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish never
           yarn run electron-builder --win --prepackaged dist-win32/win-unpacked --publish always
@@ -120,7 +120,7 @@ jobs:
 #          echo "Releasing version $PACKAGE_VERSION"
 #          #gh release create "v$PACKAGE_VERSION" ./signed-windows/*.exe \
 #
-#          gh release upload "v$PACKAGE_VERSION" ./dist-win32/*.exe \
+#          gh release upload "v$PACKAGE_VERSION" ./dist-win32/*.exe .dist-win32/latest.yml ./dist-win32/*.exe.blockmap
 #          #gh release create "v$PACKAGE_VERSION" ./dist-win32/*.exe \
 #          #  --title "Release v$PACKAGE_VERSION" \
 #          #  --notes "Pinokio version $PACKAGE_VERSION."
