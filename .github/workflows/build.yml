@@ -59,7 +59,8 @@ jobs:
           #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
           #release: true
           release: false
-          args: --win --dir  # Build win-unpacked only
+          #args: --win --dir  # Build win-unpacked only
+          args: --win
 
       - name: Check contents
         run: |
