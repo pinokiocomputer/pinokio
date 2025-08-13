@@ -134,77 +134,77 @@ jobs:
           #  --title "Release v$PACKAGE_VERSION" \
           #  --notes "Pinokio version $PACKAGE_VERSION."
 
-#  mac:
-#    needs: "create-release"
-#    runs-on: macos-latest
-#    permissions:
-#      contents: write
-#    steps:
-#      - name: Check out Git repository
-#        uses: actions/checkout@v1
-#
-#      - name: Install Node.js, NPM and Yarn
-#        uses: actions/setup-node@v1
-#        with:
-#          node-version: 22
-#
-##      - name: Prepare for app notarization
-##        if: startsWith(matrix.os, 'macos')
-##        # Import Apple API key for app notarization on macOS
-##        run: |
-##          mkdir -p ~/private_keys/
-##          echo '${{ secrets.api_key }}' > ~/private_keys/AuthKey_${{ secrets.api_key_id }}.p8
-#
-#
-#      - name: Build/release Electron app
-#        id: electron-builder
-#        uses: samuelmeuli/action-electron-builder@v1.6.0
-#        with:
-#          # GitHub token, automatically provided to the action
-#          # (No need to define this secret in the repo settings)
-#          github_token: ${{ secrets.github_token }}
-#
-#          # If the commit is tagged with a version (e.g. "v1.0.0"),
-#          # release the app after building
-#          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-#          release: true
-#          mac_certs: ${{ secrets.mac_certs }}
-#          mac_certs_password: ${{ secrets.mac_certs_password }}
-#        env:
-#          # macOS notarization API key
-#          #API_KEY_ID: ${{ secrets.api_key_id }}
-#          #API_KEY_ISSUER_ID: ${{ secrets.api_key_issuer_id }}
-#          APPLE_ID: ${{ secrets.APPLE_ID }}
-#          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-#          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-#
-#      - name: Show notarization-error.log
-#        if: failure()
-#        run: cat dist-darwin/**/notarization-error.log || echo "No notarization-error.log found"
-#
-#  linux:
-#    needs: "create-release"
-#    runs-on: ubuntu-latest
-#    permissions:
-#      contents: write
-#    steps:
-#      - name: Check out Git repository
-#        uses: actions/checkout@v1
-#
-#      - name: Install Node.js, NPM and Yarn
-#        uses: actions/setup-node@v1
-#        with:
-#          node-version: 22
-#
-#      - name: Build/release Electron app
-#        id: electron-builder
-#        uses: samuelmeuli/action-electron-builder@v1.6.0
-#        with:
-#          # GitHub token, automatically provided to the action
-#          # (No need to define this secret in the repo settings)
-#          github_token: ${{ secrets.github_token }}
-#
-#          # If the commit is tagged with a version (e.g. "v1.0.0"),
-#          # release the app after building
-#          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-#          release: true
+  mac:
+    needs: "create-release"
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 22
+
+#      - name: Prepare for app notarization
+#        if: startsWith(matrix.os, 'macos')
+#        # Import Apple API key for app notarization on macOS
+#        run: |
+#          mkdir -p ~/private_keys/
+#          echo '${{ secrets.api_key }}' > ~/private_keys/AuthKey_${{ secrets.api_key_id }}.p8
+
+
+      - name: Build/release Electron app
+        id: electron-builder
+        uses: samuelmeuli/action-electron-builder@v1.6.0
+        with:
+          # GitHub token, automatically provided to the action
+          # (No need to define this secret in the repo settings)
+          github_token: ${{ secrets.github_token }}
+
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          release: true
+          mac_certs: ${{ secrets.mac_certs }}
+          mac_certs_password: ${{ secrets.mac_certs_password }}
+        env:
+          # macOS notarization API key
+          #API_KEY_ID: ${{ secrets.api_key_id }}
+          #API_KEY_ISSUER_ID: ${{ secrets.api_key_issuer_id }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Show notarization-error.log
+        if: failure()
+        run: cat dist-darwin/**/notarization-error.log || echo "No notarization-error.log found"
+
+  linux:
+    needs: "create-release"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 22
+
+      - name: Build/release Electron app
+        id: electron-builder
+        uses: samuelmeuli/action-electron-builder@v1.6.0
+        with:
+          # GitHub token, automatically provided to the action
+          # (No need to define this secret in the repo settings)
+          github_token: ${{ secrets.github_token }}
+
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          release: true
