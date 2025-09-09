@@ -78,9 +78,12 @@ const attach = (event, webContents) => {
 
   // Enable screen capture permissions for all webContents
   webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media') {
+    console.log(`[PERMISSION DEBUG] Permission requested: "${permission}" from webContents`)
+    if (permission === 'media' || permission === 'display-capture') {
+      console.log(`[PERMISSION DEBUG] Granting permission: "${permission}"`)
       callback(true)
     } else {
+      console.log(`[PERMISSION DEBUG] Denying permission: "${permission}"`)
       callback(false)
     }
   })
@@ -415,15 +418,33 @@ const createWindow = (port) => {
       nativeWindowOpen: true,
       contextIsolation: false,
       nodeIntegrationInSubFrames: true,
+      enableRemoteModule: false,
+      experimentalFeatures: true,
       preload: path.join(__dirname, 'preload.js')
     },
   })
 
+  // Debug media device availability
+  mainWindow.webContents.once('did-finish-load', () => {
+    console.log('[MEDIA DEBUG] Main window loaded, checking media devices availability...')
+    mainWindow.webContents.executeJavaScript(`
+      console.log('[MEDIA DEBUG] navigator.mediaDevices available:', !!navigator.mediaDevices);
+      console.log('[MEDIA DEBUG] getDisplayMedia available:', !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia));
+      console.log('[MEDIA DEBUG] getUserMedia available:', !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+      if (navigator.mediaDevices && navigator.mediaDevices.getSupportedConstraints) {
+        console.log('[MEDIA DEBUG] Supported constraints:', navigator.mediaDevices.getSupportedConstraints());
+      }
+    `).catch(err => console.error('[MEDIA DEBUG] Error checking media devices:', err))
+  })
+
   // Enable screen capture permissions
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media') {
+    console.log(`[PERMISSION DEBUG] MainWindow permission requested: "${permission}"`)
+    if (permission === 'media' || permission === 'display-capture') {
+      console.log(`[PERMISSION DEBUG] MainWindow granting permission: "${permission}"`)
       callback(true)
     } else {
+      console.log(`[PERMISSION DEBUG] MainWindow denying permission: "${permission}"`)
       callback(false)
     }
   })
@@ -460,15 +481,20 @@ const loadNewWindow = (url, port) => {
       nativeWindowOpen: true,
       contextIsolation: false,
       nodeIntegrationInSubFrames: true,
+      enableRemoteModule: false,
+      experimentalFeatures: true,
       preload: path.join(__dirname, 'preload.js')
     },
   })
 
   // Enable screen capture permissions
   win.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'media') {
+    console.log(`[PERMISSION DEBUG] New window permission requested: "${permission}"`)
+    if (permission === 'media' || permission === 'display-capture') {
+      console.log(`[PERMISSION DEBUG] New window granting permission: "${permission}"`)
       callback(true)
     } else {
+      console.log(`[PERMISSION DEBUG] New window denying permission: "${permission}"`)
       callback(false)
     }
   })
@@ -614,9 +640,12 @@ document.querySelector("form").addEventListener("submit", (e) => {
 
     // Set global permission handler for screen capture
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-      if (permission === 'media') {
+      console.log(`[PERMISSION DEBUG] Global session permission requested: "${permission}"`)
+      if (permission === 'media' || permission === 'display-capture') {
+        console.log(`[PERMISSION DEBUG] Global session granting permission: "${permission}"`)
         callback(true)
       } else {
+        console.log(`[PERMISSION DEBUG] Global session denying permission: "${permission}"`)
         callback(false)
       }
     })
