@@ -76,7 +76,14 @@ function UpsertKeyValue(obj, keyToChange, value) {
 const attach = (event, webContents) => {
   let wc = webContents
 
-
+  // Enable screen capture permissions for all webContents
+  webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true)
+    } else {
+      callback(false)
+    }
+  })
 
   webContents.on('will-navigate', (event, url) => {
     if (!webContents.opened) {
@@ -411,6 +418,15 @@ const createWindow = (port) => {
       preload: path.join(__dirname, 'preload.js')
     },
   })
+
+  // Enable screen capture permissions
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true)
+    } else {
+      callback(false)
+    }
+  })
 //  enable_cors(mainWindow)
   if("" + port === "80") {
     root_url = `http://localhost`
@@ -447,6 +463,16 @@ const loadNewWindow = (url, port) => {
       preload: path.join(__dirname, 'preload.js')
     },
   })
+
+  // Enable screen capture permissions
+  win.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'media') {
+      callback(true)
+    } else {
+      callback(false)
+    }
+  })
+
 //  enable_cors(win)
   win.focus()
   win.loadURL(url)
@@ -586,6 +612,14 @@ document.querySelector("form").addEventListener("submit", (e) => {
     theme = pinokiod.theme
     colors = pinokiod.colors
 
+    // Set global permission handler for screen capture
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+      if (permission === 'media') {
+        callback(true)
+      } else {
+        callback(false)
+      }
+    })
 
     app.on('web-contents-created', attach)
     app.on('activate', function () {
