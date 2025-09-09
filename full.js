@@ -79,7 +79,7 @@ const attach = (event, webContents) => {
   // Enable screen capture permissions for all webContents
   webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
     console.log(`[PERMISSION DEBUG] Permission requested: "${permission}" from webContents`)
-    if (permission === 'media' || permission === 'display-capture') {
+    if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
       console.log(`[PERMISSION DEBUG] Granting permission: "${permission}"`)
       callback(true)
     } else {
@@ -440,7 +440,7 @@ const createWindow = (port) => {
   // Enable screen capture permissions
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
     console.log(`[PERMISSION DEBUG] MainWindow permission requested: "${permission}"`)
-    if (permission === 'media' || permission === 'display-capture') {
+    if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
       console.log(`[PERMISSION DEBUG] MainWindow granting permission: "${permission}"`)
       callback(true)
     } else {
@@ -490,7 +490,7 @@ const loadNewWindow = (url, port) => {
   // Enable screen capture permissions
   win.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
     console.log(`[PERMISSION DEBUG] New window permission requested: "${permission}"`)
-    if (permission === 'media' || permission === 'display-capture') {
+    if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
       console.log(`[PERMISSION DEBUG] New window granting permission: "${permission}"`)
       callback(true)
     } else {
@@ -547,6 +547,9 @@ if (!gotTheLock) {
 
   // Create mainWindow, load the rest of the app, etc...
   app.whenReady().then(async () => {
+    // Enable desktop capture for getDisplayMedia support
+    app.commandLine.appendSwitch('enable-experimental-web-platform-features');
+    app.commandLine.appendSwitch('enable-features', 'ScreenCaptureKit');
 
     // PROMPT
     let promptResponse
@@ -641,13 +644,19 @@ document.querySelector("form").addEventListener("submit", (e) => {
     // Set global permission handler for screen capture
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
       console.log(`[PERMISSION DEBUG] Global session permission requested: "${permission}"`)
-      if (permission === 'media' || permission === 'display-capture') {
+      if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
         console.log(`[PERMISSION DEBUG] Global session granting permission: "${permission}"`)
         callback(true)
       } else {
         console.log(`[PERMISSION DEBUG] Global session denying permission: "${permission}"`)
         callback(false)
       }
+    })
+    
+    // Enable desktop capture
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+      console.log(`[PERMISSION DEBUG] Permission check for: "${permission}"`)
+      return permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture'
     })
 
     app.on('web-contents-created', attach)
