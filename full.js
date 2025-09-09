@@ -1,4 +1,4 @@
-const {app, screen, shell, BrowserWindow, BrowserView, ipcMain, dialog, clipboard, session } = require('electron')
+const {app, screen, shell, BrowserWindow, BrowserView, ipcMain, dialog, clipboard, session, desktopCapturer } = require('electron')
 const windowStateKeeper = require('electron-window-state');
 const fs = require('fs')
 const path = require("path")
@@ -546,10 +546,11 @@ if (!gotTheLock) {
   })
 
   // Create mainWindow, load the rest of the app, etc...
+  // Enable desktop capture for getDisplayMedia support (must be before app ready)
+  app.commandLine.appendSwitch('enable-experimental-web-platform-features');
+  app.commandLine.appendSwitch('enable-features', 'GetDisplayMediaSet,GetDisplayMediaSetAutoSelectAllScreens');
+  
   app.whenReady().then(async () => {
-    // Enable desktop capture for getDisplayMedia support
-    app.commandLine.appendSwitch('enable-experimental-web-platform-features');
-    app.commandLine.appendSwitch('enable-features', 'ScreenCaptureKit');
 
     // PROMPT
     let promptResponse
@@ -657,6 +658,22 @@ document.querySelector("form").addEventListener("submit", (e) => {
     session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
       console.log(`[PERMISSION DEBUG] Permission check for: "${permission}"`)
       return permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture'
+    })
+    
+    // Handle getDisplayMedia requests to make web API work
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      console.log('[DISPLAY MEDIA DEBUG] Display media request received')
+      desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
+        console.log('[DISPLAY MEDIA DEBUG] Available sources:', sources.length)
+        if (sources.length > 0) {
+          callback({ video: sources[0], audio: 'loopback' })
+        } else {
+          callback({})
+        }
+      }).catch(err => {
+        console.error('[DISPLAY MEDIA DEBUG] Error getting sources:', err)
+        callback({})
+      })
     })
 
     app.on('web-contents-created', attach)
