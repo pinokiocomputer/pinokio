@@ -88,6 +88,26 @@ const attach = (event, webContents) => {
     }
   })
 
+  webContents.session.setPermissionCheckHandler((webContents, permission) => {
+    console.log(`[PERMISSION DEBUG] Permission check for: "${permission}"`)
+    return permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture'
+  })
+
+  webContents.session.setDisplayMediaRequestHandler((request, callback) => {
+    console.log('[DISPLAY MEDIA DEBUG] Display media request received')
+    desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
+      console.log('[DISPLAY MEDIA DEBUG] Available sources:', sources.length)
+      if (sources.length > 0) {
+        callback({ video: sources[0], audio: 'loopback' })
+      } else {
+        callback({})
+      }
+    }).catch(err => {
+      console.error('[DISPLAY MEDIA DEBUG] Error getting sources:', err)
+      callback({})
+    })
+  })
+
   webContents.on('will-navigate', (event, url) => {
     if (!webContents.opened) {
       // The first time this view is being used, set the "opened" to true, and don't do anything
@@ -555,6 +575,7 @@ if (!gotTheLock) {
   app.commandLine.appendSwitch('enable-features', 'GetDisplayMediaSet,GetDisplayMediaSetAutoSelectAllScreens');
   
   app.whenReady().then(async () => {
+    app.userAgentFallback = "Pinokio"
 
     // PROMPT
     let promptResponse
@@ -636,9 +657,20 @@ document.querySelector("form").addEventListener("submit", (e) => {
       },
       browser: {
         clearCache: async () => {
-          console.log('clear cache', session.defaultSession)
+          console.log('clear cache from all sessions')
+          
+          // Clear default session
           await session.defaultSession.clearStorageData()
-          console.log("cleared")
+          
+          // Clear all custom sessions from active windows
+          const windows = BrowserWindow.getAllWindows()
+          for (const window of windows) {
+            if (window.webContents && window.webContents.session) {
+              await window.webContents.session.clearStorageData()
+            }
+          }
+          
+          console.log("cleared all sessions")
         }
       }
     })
@@ -647,39 +679,8 @@ document.querySelector("form").addEventListener("submit", (e) => {
     theme = pinokiod.theme
     colors = pinokiod.colors
 
-    // Set global permission handler for screen capture
-    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-      console.log(`[PERMISSION DEBUG] Global session permission requested: "${permission}"`)
-      if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
-        console.log(`[PERMISSION DEBUG] Global session granting permission: "${permission}"`)
-        callback(true)
-      } else {
-        console.log(`[PERMISSION DEBUG] Global session denying permission: "${permission}"`)
-        callback(false)
-      }
-    })
     
-    // Enable desktop capture
-    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
-      console.log(`[PERMISSION DEBUG] Permission check for: "${permission}"`)
-      return permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture'
-    })
     
-    // Handle getDisplayMedia requests to make web API work
-    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-      console.log('[DISPLAY MEDIA DEBUG] Display media request received')
-      desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
-        console.log('[DISPLAY MEDIA DEBUG] Available sources:', sources.length)
-        if (sources.length > 0) {
-          callback({ video: sources[0], audio: 'loopback' })
-        } else {
-          callback({})
-        }
-      }).catch(err => {
-        console.error('[DISPLAY MEDIA DEBUG] Error getting sources:', err)
-        callback({})
-      })
-    })
 
     app.on('web-contents-created', attach)
     app.on('activate', function () {
