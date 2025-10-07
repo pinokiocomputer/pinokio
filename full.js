@@ -78,19 +78,21 @@ const attach = (event, webContents) => {
 
   // Enable screen capture permissions for all webContents
   webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    console.log(`[PERMISSION DEBUG] Permission requested: "${permission}" from webContents`)
-    if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
-      console.log(`[PERMISSION DEBUG] Granting permission: "${permission}"`)
-      callback(true)
-    } else {
-      console.log(`[PERMISSION DEBUG] Denying permission: "${permission}"`)
-      callback(false)
-    }
+    callback(true)
+    //console.log(`[PERMISSION DEBUG] Permission requested: "${permission}" from webContents`)
+    //if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
+    //  console.log(`[PERMISSION DEBUG] Granting permission: "${permission}"`)
+    //  callback(true)
+    //} else {
+    //  console.log(`[PERMISSION DEBUG] Denying permission: "${permission}"`)
+    //  callback(false)
+    //}
   })
 
   webContents.session.setPermissionCheckHandler((webContents, permission) => {
-    console.log(`[PERMISSION DEBUG] Permission check for: "${permission}"`)
-    return permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture'
+    return true
+    //console.log(`[PERMISSION DEBUG] Permission check for: "${permission}"`)
+    //return permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture'
   })
 
   webContents.session.setDisplayMediaRequestHandler((request, callback) => {
@@ -462,14 +464,15 @@ const createWindow = (port) => {
 
   // Enable screen capture permissions
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    console.log(`[PERMISSION DEBUG] MainWindow permission requested: "${permission}"`)
-    if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
-      console.log(`[PERMISSION DEBUG] MainWindow granting permission: "${permission}"`)
-      callback(true)
-    } else {
-      console.log(`[PERMISSION DEBUG] MainWindow denying permission: "${permission}"`)
-      callback(false)
-    }
+    callback(true)
+    //console.log(`[PERMISSION DEBUG] MainWindow permission requested: "${permission}"`)
+    //if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
+    //  console.log(`[PERMISSION DEBUG] MainWindow granting permission: "${permission}"`)
+    //  callback(true)
+    //} else {
+    //  console.log(`[PERMISSION DEBUG] MainWindow denying permission: "${permission}"`)
+    //  callback(false)
+    //}
   })
 //  enable_cors(mainWindow)
   if("" + port === "80") {
@@ -513,14 +516,15 @@ const loadNewWindow = (url, port) => {
 
   // Enable screen capture permissions
   win.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    console.log(`[PERMISSION DEBUG] New window permission requested: "${permission}"`)
-    if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
-      console.log(`[PERMISSION DEBUG] New window granting permission: "${permission}"`)
-      callback(true)
-    } else {
-      console.log(`[PERMISSION DEBUG] New window denying permission: "${permission}"`)
-      callback(false)
-    }
+    callback(true)
+    //console.log(`[PERMISSION DEBUG] New window permission requested: "${permission}"`)
+    //if (permission === 'media' || permission === 'display-capture' || permission === 'desktopCapture') {
+    //  console.log(`[PERMISSION DEBUG] New window granting permission: "${permission}"`)
+    //  callback(true)
+    //} else {
+    //  console.log(`[PERMISSION DEBUG] New window denying permission: "${permission}"`)
+    //  callback(false)
+    //}
   })
 
 //  enable_cors(win)
