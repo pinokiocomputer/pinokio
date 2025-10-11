@@ -26,6 +26,129 @@ const filter = function (item) {
 
 const updater = new Updater()
 const pinokiod = new Pinokiod(config)
+const ENABLE_BROWSER_CONSOLE_LOG = process.env.PINOKIO_BROWSER_LOG === '1'
+const browserConsoleState = new WeakMap()
+const attachedConsoleListeners = new WeakSet()
+const consoleLevelLabels = ['log', 'info', 'warn', 'error', 'debug']
+let browserLogFilePath
+let browserLogFileReady = false
+let browserLogBuffer = []
+let browserLogWritePromise = Promise.resolve()
+const safeParseUrl = (value, base) => {
+  if (!value) {
+    return null
+  }
+  try {
+    if (base) {
+      return new URL(value, base)
+    }
+    return new URL(value)
+  } catch (err) {
+    return null
+  }
+}
+const resolveConsoleSourceUrl = (sourceId, pageUrl) => {
+  const page = safeParseUrl(pageUrl)
+  const source = safeParseUrl(sourceId, page ? page.href : undefined)
+  if (source && (source.protocol === 'http:' || source.protocol === 'https:' || source.protocol === 'file:')) {
+    return source.href
+  }
+  if (page) {
+    return page.href
+  }
+  return null
+}
+const shouldLogUrl = (url) => {
+  if (!ENABLE_BROWSER_CONSOLE_LOG) {
+    return false
+  }
+  if (!url) {
+    return false
+  }
+  const rootParsed = safeParseUrl(root_url)
+  const target = safeParseUrl(url, rootParsed ? rootParsed.origin : undefined)
+  if (!target) {
+    return false
+  }
+  if (rootParsed) {
+    if (target.origin !== rootParsed.origin) {
+      return false
+    }
+    const normalizedTargetPath = (target.pathname || '').replace(/\/+$/, '')
+    const normalizedRootPath = (rootParsed.pathname || '').replace(/\/+$/, '')
+    if (normalizedTargetPath === normalizedRootPath) {
+      return false
+    }
+  } else {
+    const normalizedTargetPath = (target.pathname || '').replace(/\/+$/, '')
+    if (!normalizedTargetPath) {
+      return false
+    }
+  }
+  return true
+}
+const getBrowserLogFile = () => {
+  if (!ENABLE_BROWSER_CONSOLE_LOG) {
+    return null
+  }
+  if (!browserLogFilePath) {
+    if (!pinokiod || !pinokiod.kernel || !pinokiod.kernel.homedir) {
+      return null
+    }
+    try {
+      browserLogFilePath = pinokiod.kernel.path('logs/browser.log')
+    } catch (err) {
+      console.error('[BROWSER LOG] Failed to resolve browser log file path', err)
+      return null
+    }
+  }
+  return browserLogFilePath
+}
+const ensureBrowserLogFile = () => {
+  if (!ENABLE_BROWSER_CONSOLE_LOG) {
+    return null
+  }
+  const filePath = getBrowserLogFile()
+  if (!filePath) {
+    return null
+  }
+  if (browserLogFileReady) {
+    return filePath
+  }
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    if (fs.existsSync(filePath)) {
+      try {
+        const existingContent = fs.readFileSync(filePath, 'utf8')
+        const existingLines = existingContent.split(/\r?\n/).filter((line) => line.length > 0)
+        const filteredLines = []
+        for (const line of existingLines) {
+          const parts = line.split('\t')
+          if (parts.length >= 2) {
+            const urlPart = parts[1]
+            if (!shouldLogUrl(urlPart)) {
+              continue
+            }
+          }
+          filteredLines.push(`${line}\n`)
+          if (filteredLines.length > 100) {
+            filteredLines.shift()
+          }
+        }
+        browserLogBuffer = filteredLines
+        fs.writeFileSync(filePath, browserLogBuffer.join(''))
+      } catch (err) {
+        console.error('[BROWSER LOG] Failed to prime existing browser log', err)
+        browserLogBuffer = []
+      }
+    }
+    browserLogFileReady = true
+    return filePath
+  } catch (err) {
+    console.error('[BROWSER LOG] Failed to prepare browser log file', err)
+    return null
+  }
+}
 const titleBarOverlay = (colors) => {
   if (is_mac) {
     return false
@@ -45,6 +168,38 @@ function UpsertKeyValue(obj, keyToChange, value) {
   }
   // Insert at end instead
   obj[keyToChange] = value;
+}
+
+const clearBrowserConsoleState = (webContents) => {
+  if (browserConsoleState.has(webContents)) {
+    browserConsoleState.delete(webContents)
+  }
+}
+
+const updateBrowserConsoleTarget = (webContents, url) => {
+  if (!ENABLE_BROWSER_CONSOLE_LOG) {
+    return
+  }
+  if (!root_url) {
+    clearBrowserConsoleState(webContents)
+    return
+  }
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch (e) {
+    clearBrowserConsoleState(webContents)
+    return
+  }
+  if (parsed.origin !== root_url) {
+    clearBrowserConsoleState(webContents)
+    return
+  }
+  const existing = browserConsoleState.get(webContents)
+  if (existing && existing.url === parsed.href) {
+    return
+  }
+  browserConsoleState.set(webContents, { url: parsed.href })
 }
 
 
@@ -75,6 +230,54 @@ function UpsertKeyValue(obj, keyToChange, value) {
 
 const attach = (event, webContents) => {
   let wc = webContents
+
+  if (ENABLE_BROWSER_CONSOLE_LOG && !attachedConsoleListeners.has(webContents)) {
+    attachedConsoleListeners.add(webContents)
+    webContents.on('console-message', (event, level, message, line, sourceId) => {
+      if (!root_url) {
+        return
+      }
+      const state = browserConsoleState.get(webContents)
+      let pageUrl = state && state.url ? state.url : ''
+      if (!pageUrl) {
+        try {
+          pageUrl = webContents.getURL()
+        } catch (err) {
+          pageUrl = ''
+        }
+      }
+      if (!pageUrl || !pageUrl.startsWith(root_url)) {
+        return
+      }
+      const targetFile = ensureBrowserLogFile()
+      if (!targetFile) {
+        return
+      }
+      const logUrl = resolveConsoleSourceUrl(sourceId, pageUrl)
+      if (!logUrl || !shouldLogUrl(logUrl)) {
+        return
+      }
+      const timestamp = new Date().toISOString()
+      const levelLabel = consoleLevelLabels[level] || 'log'
+      let location = ''
+      if (sourceId) {
+        location = ` (${sourceId}${line ? `:${line}` : ''})`
+      } else if (line) {
+        location = ` (:${line})`
+      }
+      const entry = `[${timestamp}]\t${logUrl}\t[${levelLabel}] ${message}${location}\n`
+      browserLogBuffer.push(entry)
+      if (browserLogBuffer.length > 100) {
+        browserLogBuffer.shift()
+      }
+      browserLogWritePromise = browserLogWritePromise.then(() => fs.promises.writeFile(targetFile, browserLogBuffer.join(''))).catch((err) => {
+        console.error('[BROWSER LOG] Failed to persist console output', err)
+      })
+    })
+    webContents.once('destroyed', () => {
+      clearBrowserConsoleState(webContents)
+    })
+  }
 
   // Enable screen capture permissions for all webContents
   webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -265,6 +468,11 @@ const attach = (event, webContents) => {
     }
     launched = true
 
+    updateBrowserConsoleTarget(webContents, url)
+
+  })
+  webContents.on('did-navigate-in-page', (event, url) => {
+    updateBrowserConsoleTarget(webContents, url)
   })
   webContents.setWindowOpenHandler((config) => {
     let url = config.url
