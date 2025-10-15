@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.143.0",
+  "version": "3.144.0",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -76,7 +76,28 @@
     },
     "dmg": {
       "backgroundColor": "#ffffff",
-      "icon": null
+      "icon": null,
+      "window": {
+        "width": 520,
+        "height": 320
+      },
+      "iconSize": 120,
+      "contents": [
+        {
+          "type": "file",
+          "name": "Pinokio",
+          "path": "Pinokio.app",
+          "x": 160,
+          "y": 170
+        },
+        {
+          "type": "link",
+          "name": "Applications",
+          "path": "/Applications",
+          "x": 360,
+          "y": 170
+        }
+      ]
     },
     "linux": {
       "maintainer": "Cocktail Peanut <cocktailpeanuts@proton.me>",
@@ -125,7 +146,7 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.143.0"
+    "pinokiod": "^3.144.0"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
