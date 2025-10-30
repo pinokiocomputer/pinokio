@@ -202,6 +202,315 @@ const updateBrowserConsoleTarget = (webContents, url) => {
   browserConsoleState.set(webContents, { url: parsed.href })
 }
 
+const inspectorSessions = new Map()
+let inspectorHandlersInstalled = false
+
+const normalizeInspectorUrl = (value) => {
+  if (!value) {
+    return null
+  }
+  try {
+    return new URL(value).href
+  } catch (_) {
+    return value
+  }
+}
+
+const urlsRoughlyMatch = (expected, candidate) => {
+  if (!expected) {
+    return true
+  }
+  if (!candidate) {
+    return false
+  }
+  if (candidate === expected) {
+    return true
+  }
+  return candidate.startsWith(expected) || expected.startsWith(candidate)
+}
+
+const flattenFrameTree = (frame, acc = [], depth = 0) => {
+  if (!frame) {
+    return acc
+  }
+  acc.push({ frame, depth, url: normalizeInspectorUrl(frame.url || '') })
+  const children = Array.isArray(frame.frames) ? frame.frames : []
+  for (const child of children) {
+    flattenFrameTree(child, acc, depth + 1)
+  }
+  return acc
+}
+
+const selectTargetFrame = (webContents, payload = {}) => {
+  if (!webContents || !webContents.mainFrame) {
+    return null
+  }
+  const frames = flattenFrameTree(webContents.mainFrame, [])
+  if (!frames.length) {
+    return null
+  }
+
+  const canonicalUrl = normalizeInspectorUrl(payload.frameUrl)
+  const relativeOrdinal = typeof payload.candidateRelativeOrdinal === 'number' ? payload.candidateRelativeOrdinal : null
+  const globalOrdinal = typeof payload.frameIndex === 'number' ? payload.frameIndex : null
+
+  let matches = frames
+  if (canonicalUrl) {
+    matches = frames.filter(({ url }) => urlsRoughlyMatch(canonicalUrl, url))
+  }
+
+  if (matches.length) {
+    if (relativeOrdinal !== null) {
+      const filtered = matches.slice().sort((a, b) => a.depth - b.depth || frames.indexOf(a) - frames.indexOf(b))
+      const targetEntry = filtered[Math.min(Math.max(relativeOrdinal, 0), filtered.length - 1)]
+      if (targetEntry) {
+        return targetEntry.frame
+      }
+    }
+    const fallbackEntry = matches[0]
+    if (fallbackEntry) {
+      return fallbackEntry.frame
+    }
+  }
+
+  if (globalOrdinal !== null && frames[globalOrdinal]) {
+    return frames[globalOrdinal].frame
+  }
+
+  return frames[0]?.frame || null
+}
+
+const buildInspectorInjection = () => {
+  const source = function () {
+    try {
+      if (window.__PINOKIO_INSPECTOR__ && typeof window.__PINOKIO_INSPECTOR__.stop === 'function') {
+        window.__PINOKIO_INSPECTOR__.stop()
+      }
+
+      const overlay = document.createElement('div')
+      overlay.style.position = 'fixed'
+      overlay.style.pointerEvents = 'none'
+      overlay.style.border = '2px solid rgba(77,163,255,0.9)'
+      overlay.style.background = 'rgba(77,163,255,0.2)'
+      overlay.style.boxShadow = '0 0 0 1px rgba(23,52,92,0.45)'
+      overlay.style.zIndex = '2147483647'
+      overlay.style.display = 'none'
+      document.documentElement.appendChild(overlay)
+
+      let active = true
+
+      const post = (type, payload) => {
+        try {
+          window.parent.postMessage({ pinokioInspector: { type, frameUrl: window.location.href, ...payload } }, '*')
+        } catch (err) {
+          // ignore
+        }
+      }
+
+      const updateBox = (target) => {
+        if (!active || !target) {
+          overlay.style.display = 'none'
+          return
+        }
+        const rect = target.getBoundingClientRect()
+        if (!rect || rect.width <= 0 || rect.height <= 0) {
+          overlay.style.display = 'none'
+          return
+        }
+        overlay.style.display = 'block'
+        overlay.style.left = `${rect.left}px`
+        overlay.style.top = `${rect.top}px`
+        overlay.style.width = `${rect.width}px`
+        overlay.style.height = `${rect.height}px`
+      }
+
+      const buildPathKeys = (node) => {
+        if (!node) {
+          return []
+        }
+        const keys = []
+        let current = node
+        let depth = 0
+        while (current && current.nodeType === Node.ELEMENT_NODE && depth < 8) {
+          const tag = current.tagName ? current.tagName.toLowerCase() : 'element'
+          let descriptor = tag
+          if (current.id) {
+            descriptor += `#${current.id}`
+          } else if (current.classList && current.classList.length) {
+            descriptor += `.${Array.from(current.classList).slice(0, 2).join('.')}`
+          }
+          keys.push(descriptor)
+          current = current.parentElement
+          depth += 1
+        }
+        return keys.reverse()
+      }
+
+      const handleMove = (event) => {
+        if (!active) {
+          return
+        }
+        const target = event.target
+        updateBox(target)
+        post('update', {
+          nodeName: target && target.tagName ? target.tagName.toLowerCase() : '',
+          pathKeys: buildPathKeys(target),
+        })
+      }
+
+      const preventClick = (event) => {
+        if (!active) {
+          return
+        }
+        event.preventDefault()
+        event.stopPropagation()
+      }
+
+      const handleClick = (event) => {
+        if (!active) {
+          return
+        }
+        event.preventDefault()
+        event.stopPropagation()
+        const html = event.target && event.target.outerHTML ? event.target.outerHTML : ''
+        post('complete', {
+          outerHTML: html,
+          pathKeys: buildPathKeys(event.target),
+        })
+        stop()
+      }
+
+      const handleKey = (event) => {
+        if (!active) {
+          return
+        }
+        if (event.key === 'Escape') {
+          post('cancelled', {})
+          stop()
+        }
+      }
+
+      const stop = () => {
+        if (!active) {
+          return
+        }
+        active = false
+        document.removeEventListener('mousemove', handleMove, true)
+        document.removeEventListener('mouseover', handleMove, true)
+        document.removeEventListener('mousedown', preventClick, true)
+        document.removeEventListener('click', handleClick, true)
+        window.removeEventListener('keydown', handleKey, true)
+        if (overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay)
+        }
+        window.__PINOKIO_INSPECTOR__ = null
+      }
+
+      document.addEventListener('mousemove', handleMove, true)
+      document.addEventListener('mouseover', handleMove, true)
+      document.addEventListener('mousedown', preventClick, true)
+      document.addEventListener('click', handleClick, true)
+      window.addEventListener('keydown', handleKey, true)
+
+      window.__PINOKIO_INSPECTOR__ = {
+        stop,
+      }
+
+      post('started', {})
+    } catch (error) {
+      try {
+        window.parent.postMessage({ pinokioInspector: { type: 'error', frameUrl: window.location.href, message: error && error.message ? error.message : String(error) } }, '*')
+      } catch (_) {}
+    }
+  }
+  return `(${source.toString()})();`
+}
+
+const startInspectorSession = async (webContents, payload = {}) => {
+  const existing = inspectorSessions.get(webContents.id)
+  if (existing) {
+    await stopInspectorSession(webContents)
+  }
+
+  const targetFrame = selectTargetFrame(webContents, payload)
+  if (!targetFrame) {
+    throw new Error('Unable to locate iframe to inspect.')
+  }
+
+  await targetFrame.executeJavaScript(buildInspectorInjection(), true)
+
+  const navigationHandler = () => {
+    const resultPromise = stopInspectorSession(webContents)
+    Promise.resolve(resultPromise).then((outcome) => {
+      if (!webContents.isDestroyed()) {
+        webContents.send('pinokio:inspector-cancelled', { frameUrl: (outcome && outcome.frameUrl) || targetFrame.url || payload.frameUrl || '' })
+      }
+    })
+  }
+
+  if (!webContents.isDestroyed()) {
+    webContents.on('did-navigate', navigationHandler)
+    webContents.on('did-navigate-in-page', navigationHandler)
+  }
+
+  inspectorSessions.set(webContents.id, {
+    frame: targetFrame,
+    navigationHandler,
+  })
+
+  return {
+    frameUrl: targetFrame.url || payload.frameUrl || '',
+  }
+}
+
+const stopInspectorSession = async (webContents) => {
+  const session = inspectorSessions.get(webContents.id)
+  if (!session) {
+    return { frameUrl: '' }
+  }
+  inspectorSessions.delete(webContents.id)
+  if (session.navigationHandler && !webContents.isDestroyed()) {
+    webContents.removeListener('did-navigate', session.navigationHandler)
+    webContents.removeListener('did-navigate-in-page', session.navigationHandler)
+  }
+  const frameUrl = session.frame && session.frame.url ? session.frame.url : ''
+  try {
+    await session.frame.executeJavaScript('window.__PINOKIO_INSPECTOR__ && window.__PINOKIO_INSPECTOR__.stop()', true)
+  } catch (_) {}
+  return { frameUrl }
+}
+
+const installInspectorHandlers = () => {
+  if (inspectorHandlersInstalled) {
+    return
+  }
+  inspectorHandlersInstalled = true
+
+  ipcMain.handle('pinokio:start-inspector', async (event, payload = {}) => {
+    try {
+      const result = await startInspectorSession(event.sender, payload)
+      event.sender.send('pinokio:inspector-started', { frameUrl: result.frameUrl })
+      return { ok: true }
+    } catch (error) {
+      const message = error && error.message ? error.message : 'Unable to start inspect mode.'
+      event.sender.send('pinokio:inspector-error', { message })
+      throw new Error(message)
+    }
+  })
+
+  ipcMain.handle('pinokio:stop-inspector', async (event) => {
+    try {
+      const result = await stopInspectorSession(event.sender)
+      event.sender.send('pinokio:inspector-cancelled', { frameUrl: result.frameUrl || '' })
+      return { ok: true }
+    } catch (error) {
+      const message = error && error.message ? error.message : 'Unable to stop inspect mode.'
+      event.sender.send('pinokio:inspector-error', { message })
+      throw new Error(message)
+    }
+  })
+}
+
 
 //function enable_cors(win) {
 //  win.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -788,6 +1097,8 @@ if (!gotTheLock) {
   
   app.whenReady().then(async () => {
     app.userAgentFallback = "Pinokio"
+
+    installInspectorHandlers()
 
     // PROMPT
     let promptResponse
