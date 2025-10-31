@@ -366,16 +366,93 @@ const buildInspectorInjection = () => {
         event.stopPropagation()
       }
 
-      const handleClick = (event) => {
+      const handleClick = async (event) => {
         if (!active) {
           return
         }
         event.preventDefault()
         event.stopPropagation()
-        const html = event.target && event.target.outerHTML ? event.target.outerHTML : ''
+        
+        const target = event.target
+        const html = target && target.outerHTML ? target.outerHTML : ''
+        let screenshot = null
+        
+        // Hide the overlay before taking screenshot to avoid capturing it
+        if (overlay && overlay.style) {
+          overlay.style.display = 'none'
+        }
+        
+        // Small delay to ensure overlay is hidden before screenshot
+        await new Promise(resolve => setTimeout(resolve, 50))
+        
+        try {
+          // Use html2canvas-like approach to capture actual element rendering
+          const rect = target.getBoundingClientRect()
+          
+          // Send element bounds for screenshot capture
+          const screenshotRequest = {
+            type: 'screenshot',
+            bounds: {
+              x: Math.round(rect.left),
+              y: Math.round(rect.top),
+              width: Math.max(1, Math.round(rect.width)),
+              height: Math.max(1, Math.round(rect.height))
+            },
+            devicePixelRatio: window.devicePixelRatio || 1,
+            frameUrl: window.location.href
+          }
+          
+          // Post screenshot request via postMessage to main page
+          try {
+            console.log('Attempting screenshot capture...')
+            console.log('electronAPI available in iframe:', !!window.electronAPI)
+            console.log('Screenshot request:', screenshotRequest)
+            
+            // Send screenshot request to parent page via postMessage
+            const response = await new Promise((resolve, reject) => {
+              const messageId = 'screenshot_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+              
+              const handleResponse = (event) => {
+                if (event.data && event.data.pinokioScreenshotResponse && event.data.messageId === messageId) {
+                  window.removeEventListener('message', handleResponse)
+                  if (event.data.success) {
+                    resolve(event.data.screenshot)
+                  } else {
+                    reject(new Error(event.data.error || 'Screenshot failed'))
+                  }
+                }
+              }
+              
+              window.addEventListener('message', handleResponse)
+              
+              // Send request to parent page
+              window.parent.postMessage({
+                pinokioScreenshotRequest: screenshotRequest,
+                messageId: messageId
+              }, '*')
+              
+              // Timeout after 3 seconds
+              setTimeout(() => {
+                window.removeEventListener('message', handleResponse)
+                reject(new Error('Screenshot timeout'))
+              }, 3000)
+            })
+            
+            screenshot = response
+            console.log('Screenshot captured successfully via parent page')
+          } catch (screenshotError) {
+            console.error('Screenshot capture failed:', screenshotError)
+            screenshot = null
+          }
+        } catch (error) {
+          console.warn('Screenshot capture failed:', error)
+          screenshot = null
+        }
+        
         post('complete', {
           outerHTML: html,
-          pathKeys: buildPathKeys(event.target),
+          pathKeys: buildPathKeys(target),
+          screenshot: screenshot
         })
         stop()
       }
@@ -439,6 +516,7 @@ const startInspectorSession = async (webContents, payload = {}) => {
 
   await targetFrame.executeJavaScript(buildInspectorInjection(), true)
 
+
   const navigationHandler = () => {
     const resultPromise = stopInspectorSession(webContents)
     Promise.resolve(resultPromise).then((outcome) => {
@@ -481,10 +559,13 @@ const stopInspectorSession = async (webContents) => {
 }
 
 const installInspectorHandlers = () => {
+  console.log('Installing inspector handlers...')
   if (inspectorHandlersInstalled) {
+    console.log('Inspector handlers already installed, skipping')
     return
   }
   inspectorHandlersInstalled = true
+  console.log('Installing pinokio:capture-screenshot handler')
 
   ipcMain.handle('pinokio:start-inspector', async (event, payload = {}) => {
     try {
@@ -509,6 +590,143 @@ const installInspectorHandlers = () => {
       throw new Error(message)
     }
   })
+
+  ipcMain.handle('pinokio:capture-screenshot-debug', async (event, payload) => {
+    const { screenshotRequest } = payload
+    if (!screenshotRequest || !screenshotRequest.bounds) {
+      throw new Error('Invalid screenshot request')
+    }
+    
+    // Get the inspector session to access the target frame
+    const session = inspectorSessions.get(event.sender.id)
+    if (!session || !session.frame) {
+      throw new Error('No inspector session or frame found')
+    }
+    
+    try {
+      const bounds = screenshotRequest.bounds
+      const dpr = screenshotRequest.devicePixelRatio || 1
+      
+      // Get the frame's position relative to the top window
+      const framePosition = await session.frame.executeJavaScript(`
+        (function() {
+          let x = 0, y = 0;
+          let currentWindow = window;
+          
+          while (currentWindow !== window.top) {
+            const frameElement = currentWindow.frameElement;
+            if (frameElement) {
+              const rect = frameElement.getBoundingClientRect();
+              x += rect.left;
+              y += rect.top;
+            }
+            currentWindow = currentWindow.parent;
+          }
+          
+          return { x, y };
+        })();
+      `)
+      
+      // Capture full page and crop to element bounds
+      const fullImage = await event.sender.capturePage()
+      const fullSize = fullImage.getSize()
+      
+      // Calculate crop bounds with frame position and device pixel ratio
+      const cropBounds = {
+        x: Math.round((bounds.x + framePosition.x) * dpr),
+        y: Math.round((bounds.y + framePosition.y) * dpr),  
+        width: Math.round(bounds.width * dpr),
+        height: Math.round(bounds.height * dpr)
+      }
+      
+      // Validate crop bounds
+      cropBounds.x = Math.max(0, Math.min(cropBounds.x, fullSize.width - 1))
+      cropBounds.y = Math.max(0, Math.min(cropBounds.y, fullSize.height - 1))
+      cropBounds.width = Math.min(cropBounds.width, fullSize.width - cropBounds.x)
+      cropBounds.height = Math.min(cropBounds.height, fullSize.height - cropBounds.y)
+      
+      const croppedImage = fullImage.crop(cropBounds)
+      const buffer = croppedImage.toPNG()
+      
+      return 'data:image/png;base64,' + buffer.toString('base64')
+    } catch (error) {
+      console.error('Screenshot capture failed:', error)
+      throw error
+    }
+  })
+}
+
+// Screenshot capture function for inspect mode
+const captureScreenshotRegion = async (bounds) => {
+  try {
+    const { nativeImage } = require('electron')
+    
+    // Get all displays to find the correct one
+    const displays = screen.getAllDisplays()
+    const primaryDisplay = screen.getPrimaryDisplay()
+    
+    // Get desktop capturer sources with full resolution
+    const sources = await desktopCapturer.getSources({ 
+      types: ['screen'],
+      thumbnailSize: {
+        width: primaryDisplay.bounds.width * primaryDisplay.scaleFactor,
+        height: primaryDisplay.bounds.height * primaryDisplay.scaleFactor
+      }
+    })
+    
+    if (sources.length === 0) {
+      throw new Error('No screen sources available')
+    }
+    
+    // Find the screen source that matches our primary display
+    let screenSource = sources[0] // fallback to first source
+    
+    // Try to find the exact screen source by name or use the first one
+    for (const source of sources) {
+      if (source.name.includes('Entire Screen') || source.name.includes('Screen 1')) {
+        screenSource = source
+        break
+      }
+    }
+    
+    // Get the full resolution screenshot from thumbnail
+    const thumbnailImage = screenSource.thumbnail
+    const fullScreenshotBuffer = thumbnailImage.toPNG()
+    const fullScreenshot = nativeImage.createFromBuffer(fullScreenshotBuffer)
+    
+    // Calculate the actual pixel bounds accounting for device pixel ratio
+    const scaleFactor = primaryDisplay.scaleFactor
+    const actualBounds = {
+      x: Math.max(0, Math.round(bounds.x * scaleFactor)),
+      y: Math.max(0, Math.round(bounds.y * scaleFactor)),
+      width: Math.min(
+        Math.round(bounds.width * scaleFactor),
+        fullScreenshot.getSize().width - Math.round(bounds.x * scaleFactor)
+      ),
+      height: Math.min(
+        Math.round(bounds.height * scaleFactor),
+        fullScreenshot.getSize().height - Math.round(bounds.y * scaleFactor)
+      )
+    }
+    
+    // Ensure minimum size
+    actualBounds.width = Math.max(1, actualBounds.width)
+    actualBounds.height = Math.max(1, actualBounds.height)
+    
+    // Crop the screenshot to the element bounds
+    const croppedImage = fullScreenshot.crop(actualBounds)
+    
+    // Convert to PNG buffer and then to data URL
+    const croppedBuffer = croppedImage.toPNG()
+    const dataUrl = 'data:image/png;base64,' + croppedBuffer.toString('base64')
+    
+    console.log(`Screenshot captured: ${actualBounds.width}x${actualBounds.height} at (${actualBounds.x},${actualBounds.y})`)
+    
+    return dataUrl
+  } catch (error) {
+    console.warn('Screenshot capture failed:', error)
+    throw error
+  }
 }
 
 
@@ -1096,6 +1314,7 @@ if (!gotTheLock) {
   app.commandLine.appendSwitch('enable-features', 'GetDisplayMediaSet,GetDisplayMediaSetAutoSelectAllScreens');
   
   app.whenReady().then(async () => {
+    console.log('App is ready, about to install inspector handlers...')
     app.userAgentFallback = "Pinokio"
 
     installInspectorHandlers()

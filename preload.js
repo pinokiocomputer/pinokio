@@ -67,6 +67,9 @@ window.electronAPI = {
   },
   startInspector: (payload) => ipcRenderer.invoke('pinokio:start-inspector', payload || {}),
   stopInspector: () => ipcRenderer.invoke('pinokio:stop-inspector'),
+  captureScreenshot: (screenshotRequest) => {
+    return ipcRenderer.invoke('pinokio:capture-screenshot-debug', { screenshotRequest })
+  },
 }
 
 ;(function initInspector() {
@@ -261,6 +264,38 @@ window.electronAPI = {
     })
     htmlBlock.spellcheck = false
 
+    const screenshotBlock = document.createElement('div')
+    screenshotBlock.dataset.role = 'screenshot-container'
+    Object.assign(screenshotBlock.style, {
+      margin: '8px 0',
+      padding: '8px',
+      borderRadius: '8px',
+      background: 'rgba(255,255,255,0.06)',
+      border: '1px solid rgba(255,255,255,0.12)',
+      display: 'none',
+      textAlign: 'center',
+    })
+
+    const screenshotImg = document.createElement('img')
+    screenshotImg.dataset.role = 'screenshot'
+    Object.assign(screenshotImg.style, {
+      maxWidth: '100%',
+      maxHeight: '200px',
+      borderRadius: '4px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+    })
+
+    const screenshotLabel = document.createElement('div')
+    screenshotLabel.textContent = 'Element Screenshot'
+    Object.assign(screenshotLabel.style, {
+      fontSize: '11px',
+      color: '#9aa7c2',
+      marginBottom: '8px',
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em',
+    })
+
+    screenshotBlock.append(screenshotLabel, screenshotImg)
 
     const footer = document.createElement('div')
     Object.assign(footer.style, {
@@ -285,9 +320,25 @@ window.electronAPI = {
       fontWeight: '600',
     })
 
-    footer.append(copyButton)
+    const copyScreenshotButton = document.createElement('button')
+    copyScreenshotButton.dataset.role = 'copy-screenshot'
+    copyScreenshotButton.type = 'button'
+    copyScreenshotButton.textContent = 'Copy screenshot'
+    Object.assign(copyScreenshotButton.style, {
+      display: 'none',
+      background: 'rgba(77,163,255,0.2)',
+      border: '1px solid rgba(77,163,255,0.4)',
+      borderRadius: '6px',
+      padding: '4px 10px',
+      fontSize: '11px',
+      cursor: 'pointer',
+      color: '#ccd5ff',
+      fontWeight: '600',
+    })
 
-    container.append(header, status, urlRow, htmlBlock, footer)
+    footer.append(copyButton, copyScreenshotButton)
+
+    container.append(header, status, urlRow, htmlBlock, screenshotBlock, footer)
     document.body.appendChild(container)
 
     const overlay = {
@@ -295,7 +346,10 @@ window.electronAPI = {
       status,
       urlRow,
       htmlBlock,
+      screenshotBlock,
+      screenshotImg,
       copyButton,
+      copyScreenshotButton,
       closeButton,
     }
 
@@ -334,11 +388,41 @@ window.electronAPI = {
       }
     })
 
+    copyScreenshotButton.addEventListener('click', async () => {
+      const img = overlay.screenshotImg
+      if (!img.src) {
+        return
+      }
+      try {
+        // Convert data URL to blob
+        const response = await fetch(img.src)
+        const blob = await response.blob()
+        
+        if (navigator.clipboard && navigator.clipboard.write) {
+          const clipboardItem = new ClipboardItem({ 'image/png': blob })
+          await navigator.clipboard.write([clipboardItem])
+        } else {
+          throw new Error('Clipboard API not available')
+        }
+        
+        overlay.copyScreenshotButton.textContent = 'Copied'
+        setTimeout(() => {
+          overlay.copyScreenshotButton.textContent = 'Copy screenshot'
+        }, 1500)
+      } catch (err) {
+        console.warn('Screenshot copy failed:', err)
+        overlay.copyScreenshotButton.textContent = 'Copy failed'
+        setTimeout(() => {
+          overlay.copyScreenshotButton.textContent = 'Copy screenshot'
+        }, 1500)
+      }
+    })
+
     state.overlay = overlay
     return overlay
   }
 
-  const showOverlay = (message, frameUrl, html) => {
+  const showOverlay = (message, frameUrl, html, screenshot) => {
     const overlay = ensureOverlay()
     if (overlay.container.parentNode) {
       overlay.container.parentNode.appendChild(overlay.container)
@@ -352,6 +436,8 @@ window.electronAPI = {
     overlay.status.textContent = message || ''
     overlay.urlRow.textContent = frameUrl ? `Page: ${frameUrl}` : ''
     state.displayUrl = frameUrl || null
+    
+    // Handle HTML content
     if (html) {
       const pageUrl = frameUrl || state.displayUrl || state.lastUrl || ''
       const domPath = state.lastDomPath || ''
@@ -372,6 +458,18 @@ window.electronAPI = {
       overlay.htmlBlock.value = ''
       overlay.copyButton.style.display = 'none'
     }
+    
+    // Handle screenshot content
+    if (screenshot) {
+      overlay.screenshotImg.src = screenshot
+      overlay.screenshotBlock.style.display = 'block'
+      overlay.copyScreenshotButton.style.display = 'inline-flex'
+      overlay.copyScreenshotButton.textContent = 'Copy screenshot'
+    } else {
+      overlay.screenshotImg.src = ''
+      overlay.screenshotBlock.style.display = 'none'
+      overlay.copyScreenshotButton.style.display = 'none'
+    }
   }
 
   const hideOverlay = () => {
@@ -383,6 +481,9 @@ window.electronAPI = {
       overlay.htmlBlock.value = ''
       overlay.htmlBlock.style.display = 'none'
       overlay.copyButton.style.display = 'none'
+      overlay.screenshotImg.src = ''
+      overlay.screenshotBlock.style.display = 'none'
+      overlay.copyScreenshotButton.style.display = 'none'
     }
     state.instructionsVisible = false
     state.closing = false
@@ -503,10 +604,11 @@ window.electronAPI = {
 
     if (data.type === 'complete') {
       const html = typeof data.outerHTML === 'string' ? data.outerHTML : ''
+      const screenshot = typeof data.screenshot === 'string' ? data.screenshot : null
       if (Array.isArray(data.pathKeys) && data.pathKeys.length) {
         state.lastDomPath = data.pathKeys.join(' > ')
       }
-      showOverlay('Element captured. Inspect again or close.', frameUrl || '', html)
+      showOverlay('Element captured. Inspect again or close.', frameUrl || '', html, screenshot)
       state.closing = true
       window.electronAPI.stopInspector().catch(() => {}).finally(() => {
         state.closing = false
@@ -555,7 +657,38 @@ window.electronAPI = {
     showOverlay('Inspect mode enabled – hover items and click to capture.', url || '', null)
   })
 
+  // Handle screenshot requests from iframes  
+  const handleScreenshotMessage = async (event) => {
+    if (event.data && event.data.pinokioScreenshotRequest) {
+      try {
+        const screenshotRequest = event.data.pinokioScreenshotRequest
+        const messageId = event.data.messageId
+        
+        const screenshot = await window.electronAPI.captureScreenshot(screenshotRequest)
+        
+        // Send response back to iframe
+        event.source.postMessage({
+          pinokioScreenshotResponse: true,
+          messageId: messageId,
+          success: true,
+          screenshot: screenshot
+        }, '*')
+      } catch (error) {
+        console.error('Screenshot capture failed:', error)
+        
+        // Send error response back to iframe
+        event.source.postMessage({
+          pinokioScreenshotResponse: true,
+          messageId: event.data.messageId,
+          success: false,
+          error: error.message || 'Screenshot failed'
+        }, '*')
+      }
+    }
+  }
+
   window.addEventListener('message', handleInspectorMessage)
+  window.addEventListener('message', handleScreenshotMessage)
   document.addEventListener('click', handleToggleClick, true)
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.active) {
