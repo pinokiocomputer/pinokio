@@ -245,6 +245,55 @@ window.electronAPI = {
       wordBreak: 'break-all',
     })
 
+    const htmlSection = document.createElement('div')
+    htmlSection.dataset.role = 'html-container'
+    Object.assign(htmlSection.style, {
+      display: 'none',
+      margin: '8px 0',
+      padding: '8px',
+      borderRadius: '8px',
+      background: 'rgba(255,255,255,0.06)',
+      border: '1px solid rgba(255,255,255,0.12)',
+    })
+
+    const htmlHeader = document.createElement('div')
+    Object.assign(htmlHeader.style, {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '8px',
+      marginBottom: '6px',
+    })
+
+    const htmlLabel = document.createElement('div')
+    htmlLabel.textContent = 'Element Snippet'
+    Object.assign(htmlLabel.style, {
+      fontSize: '11px',
+      color: '#9aa7c2',
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em',
+    })
+
+    const buttonBaseStyle = {
+      display: 'none',
+      background: 'rgba(77,163,255,0.2)',
+      border: '1px solid rgba(77,163,255,0.4)',
+      borderRadius: '6px',
+      padding: '4px 12px',
+      fontSize: '11px',
+      cursor: 'pointer',
+      color: '#ccd5ff',
+      fontWeight: '600',
+    }
+
+    const copyButton = document.createElement('button')
+    copyButton.dataset.role = 'copy'
+    copyButton.type = 'button'
+    copyButton.textContent = 'Copy snippet'
+    Object.assign(copyButton.style, buttonBaseStyle)
+
+    htmlHeader.append(htmlLabel, copyButton)
+
     const htmlBlock = document.createElement('textarea')
     htmlBlock.dataset.role = 'html'
     Object.assign(htmlBlock.style, {
@@ -261,8 +310,12 @@ window.electronAPI = {
       color: '#fefefe',
       resize: 'vertical',
       minHeight: '140px',
+      width: '100%',
+      boxSizing: 'border-box',
     })
     htmlBlock.spellcheck = false
+
+    htmlSection.append(htmlHeader, htmlBlock)
 
     const screenshotBlock = document.createElement('div')
     screenshotBlock.dataset.role = 'screenshot-container'
@@ -274,6 +327,15 @@ window.electronAPI = {
       border: '1px solid rgba(255,255,255,0.12)',
       display: 'none',
       textAlign: 'center',
+    })
+
+    const screenshotHeader = document.createElement('div')
+    Object.assign(screenshotHeader.style, {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '8px',
+      marginBottom: '8px',
     })
 
     const screenshotImg = document.createElement('img')
@@ -290,61 +352,27 @@ window.electronAPI = {
     Object.assign(screenshotLabel.style, {
       fontSize: '11px',
       color: '#9aa7c2',
-      marginBottom: '8px',
       textTransform: 'uppercase',
       letterSpacing: '0.06em',
-    })
-
-    screenshotBlock.append(screenshotLabel, screenshotImg)
-
-    const footer = document.createElement('div')
-    Object.assign(footer.style, {
-      display: 'flex',
-      justifyContent: 'flex-end',
-      gap: '8px',
-    })
-
-    const copyButton = document.createElement('button')
-    copyButton.dataset.role = 'copy'
-    copyButton.type = 'button'
-    copyButton.textContent = 'Copy snippet'
-    Object.assign(copyButton.style, {
-      display: 'none',
-      background: 'rgba(255,255,255,0.18)',
-      border: 'none',
-      borderRadius: '6px',
-      padding: '4px 10px',
-      fontSize: '11px',
-      cursor: 'pointer',
-      color: '#10131a',
-      fontWeight: '600',
     })
 
     const copyScreenshotButton = document.createElement('button')
     copyScreenshotButton.dataset.role = 'copy-screenshot'
     copyScreenshotButton.type = 'button'
     copyScreenshotButton.textContent = 'Copy screenshot'
-    Object.assign(copyScreenshotButton.style, {
-      display: 'none',
-      background: 'rgba(77,163,255,0.2)',
-      border: '1px solid rgba(77,163,255,0.4)',
-      borderRadius: '6px',
-      padding: '4px 10px',
-      fontSize: '11px',
-      cursor: 'pointer',
-      color: '#ccd5ff',
-      fontWeight: '600',
-    })
+    Object.assign(copyScreenshotButton.style, buttonBaseStyle)
 
-    footer.append(copyButton, copyScreenshotButton)
+    screenshotHeader.append(screenshotLabel, copyScreenshotButton)
+    screenshotBlock.append(screenshotHeader, screenshotImg)
 
-    container.append(header, status, urlRow, htmlBlock, screenshotBlock, footer)
+    container.append(header, status, urlRow, htmlSection, screenshotBlock)
     document.body.appendChild(container)
 
     const overlay = {
       container,
       status,
       urlRow,
+      htmlSection,
       htmlBlock,
       screenshotBlock,
       screenshotImg,
@@ -449,11 +477,13 @@ window.electronAPI = {
         lines.push(`DOM: ${domPath}`)
       }
       lines.push(`HTML: ${html}`)
+      overlay.htmlSection.style.display = 'block'
       overlay.htmlBlock.style.display = 'block'
       overlay.htmlBlock.value = lines.join('\n')
       overlay.copyButton.style.display = 'inline-flex'
       overlay.copyButton.textContent = 'Copy snippet'
     } else {
+      overlay.htmlSection.style.display = 'none'
       overlay.htmlBlock.style.display = 'none'
       overlay.htmlBlock.value = ''
       overlay.copyButton.style.display = 'none'
@@ -479,6 +509,7 @@ window.electronAPI = {
       overlay.status.textContent = ''
       overlay.urlRow.textContent = ''
       overlay.htmlBlock.value = ''
+      overlay.htmlSection.style.display = 'none'
       overlay.htmlBlock.style.display = 'none'
       overlay.copyButton.style.display = 'none'
       overlay.screenshotImg.src = ''
