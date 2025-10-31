@@ -169,6 +169,14 @@ window.electronAPI = {
       return state.overlay
     }
 
+    // Remove stale overlays left over from previous script executions
+    const orphaned = Array.from(document.querySelectorAll('.pinokio-inspector-overlay'))
+    for (const node of orphaned) {
+      if (!state.overlay || node !== state.overlay.container) {
+        node.remove()
+      }
+    }
+
     const container = document.createElement('div')
     container.className = 'pinokio-inspector-overlay'
     Object.assign(container.style, {
@@ -186,7 +194,7 @@ window.electronAPI = {
       display: 'none',
       flexDirection: 'column',
       gap: '8px',
-      zIndex: '2147483638',
+      zIndex: '2147483646',
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       fontSize: '12px',
     })
@@ -210,6 +218,7 @@ window.electronAPI = {
     const closeButton = document.createElement('button')
     closeButton.type = 'button'
     closeButton.textContent = '×'
+    closeButton.dataset.role = 'close'
     Object.assign(closeButton.style, {
       background: 'transparent',
       border: 'none',
@@ -331,6 +340,14 @@ window.electronAPI = {
 
   const showOverlay = (message, frameUrl, html) => {
     const overlay = ensureOverlay()
+    if (overlay.container.parentNode) {
+      overlay.container.parentNode.appendChild(overlay.container)
+    }
+    for (const node of document.querySelectorAll('.pinokio-inspector-overlay')) {
+      if (node !== overlay.container) {
+        node.style.display = 'none'
+      }
+    }
     overlay.container.style.display = 'flex'
     overlay.status.textContent = message || ''
     overlay.urlRow.textContent = frameUrl ? `Page: ${frameUrl}` : ''
@@ -490,6 +507,10 @@ window.electronAPI = {
         state.lastDomPath = data.pathKeys.join(' > ')
       }
       showOverlay('Element captured. Inspect again or close.', frameUrl || '', html)
+      state.closing = true
+      window.electronAPI.stopInspector().catch(() => {}).finally(() => {
+        state.closing = false
+      })
       resetState()
       return
     }
@@ -514,6 +535,10 @@ window.electronAPI = {
   }
 
   ipcRenderer.on('pinokio:inspector-cancelled', () => {
+    if (state.closing) {
+      state.closing = false
+      return
+    }
     resetState()
     hideOverlay()
   })
