@@ -399,7 +399,9 @@ const buildInspectorInjection = () => {
               height: Math.max(1, Math.round(rect.height))
             },
             devicePixelRatio: window.devicePixelRatio || 1,
-            frameUrl: window.location.href
+            frameUrl: window.location.href,
+            __pinokioRelayStage: 0,
+            __pinokioRelayComplete: window === window.top
           }
           
           // Post screenshot request via postMessage to main page
@@ -503,6 +505,354 @@ const buildInspectorInjection = () => {
   return `(${source.toString()})();`
 }
 
+const buildScreenshotRelayInjection = () => {
+  const source = function () {
+    try {
+      if (window.__PINOKIO_SCREENSHOT_RELAY__) {
+        return
+      }
+      window.__PINOKIO_SCREENSHOT_RELAY__ = true
+
+      const pending = new Map()
+      const EXPIRATION_MS = 5000
+
+      const rememberSource = (messageId, sourceWindow) => {
+        if (!messageId || !sourceWindow) {
+          return
+        }
+        pending.set(messageId, sourceWindow)
+        setTimeout(() => {
+          pending.delete(messageId)
+        }, EXPIRATION_MS)
+      }
+
+      const safeStringify = (value) => {
+        try {
+          return JSON.stringify(value)
+        } catch (_) {
+          return '"[unserializable]"'
+        }
+      }
+
+      const log = (label, payload) => {
+        try {
+          console.log('[Pinokio Screenshot Relay] ' + label + ' ' + safeStringify(payload))
+        } catch (_) {
+          // ignore logging failures
+        }
+      }
+
+      log('relay-installed', { href: window.location.href })
+
+      window.addEventListener('message', (event) => {
+        const data = event && event.data
+        log('message-event', {
+          href: window.location.href,
+          hasData: Boolean(data),
+          messageId: data && data.messageId ? data.messageId : null,
+          hasRequest: Boolean(data && data.pinokioScreenshotRequest),
+          hasResponse: Boolean(data && data.pinokioScreenshotResponse)
+        })
+        if (!data) {
+          return
+        }
+
+        if (data.pinokioScreenshotRequest) {
+          if (!event.source || event.source === window) {
+            log('request-ignored-no-source', {
+              href: window.location.href,
+              messageId: data.messageId || null
+            })
+            return
+          }
+
+          rememberSource(data.messageId, event.source)
+          log('request-processing', {
+            href: window.location.href,
+            messageId: data.messageId || null,
+            originalBounds: data.pinokioScreenshotRequest && data.pinokioScreenshotRequest.bounds ? data.pinokioScreenshotRequest.bounds : null,
+            originalDevicePixelRatio: data.pinokioScreenshotRequest ? data.pinokioScreenshotRequest.devicePixelRatio : null
+          })
+
+          let offsetX = 0
+          let offsetY = 0
+          let matchedFrame = false
+          try {
+            for (let index = 0; index < window.frames.length; index += 1) {
+              const childWindow = window.frames[index]
+              if (childWindow === event.source) {
+                log('matching-window-frames', {
+                  href: window.location.href,
+                  messageId: data.messageId || null,
+                  frameIndex: index
+                })
+                try {
+                  const frameElement = childWindow.frameElement
+                  if (frameElement) {
+                    const rect = frameElement.getBoundingClientRect()
+                    offsetX = rect ? rect.left || 0 : 0
+                    offsetY = rect ? rect.top || 0 : 0
+                    matchedFrame = true
+                    log('matched-window-frames', {
+                      href: window.location.href,
+                      messageId: data.messageId || null,
+                      frameIndex: index,
+                      rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null
+                    })
+                    break
+                  }
+                } catch (error) {
+                  log('frame-element-access-error', {
+                    href: window.location.href,
+                    messageId: data.messageId || null,
+                    frameIndex: index,
+                    error: error && error.message ? error.message : String(error)
+                  })
+                }
+              }
+            }
+
+            if (!matchedFrame) {
+              const FRAME_SELECTOR = 'iframe, frame'
+              const frames = document.querySelectorAll ? document.querySelectorAll(FRAME_SELECTOR) : []
+              log('matching-query-selector', {
+                href: window.location.href,
+                messageId: data.messageId || null,
+                selector: FRAME_SELECTOR,
+                count: frames ? frames.length : 0
+              })
+              for (const frameEl of frames) {
+                if (!frameEl) {
+                  continue
+                }
+                try {
+                  if (frameEl.contentWindow === event.source) {
+                    const rect = frameEl.getBoundingClientRect()
+                    offsetX = rect ? rect.left || 0 : 0
+                    offsetY = rect ? rect.top || 0 : 0
+                    matchedFrame = true
+                    log('matched-query-selector', {
+                      href: window.location.href,
+                      messageId: data.messageId || null,
+                      selector: FRAME_SELECTOR,
+                      rect: rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null
+                    })
+                    break
+                  }
+                } catch (error) {
+                  log('query-selector-access-error', {
+                    href: window.location.href,
+                    messageId: data.messageId || null,
+                    selector: FRAME_SELECTOR,
+                    error: error && error.message ? error.message : String(error)
+                  })
+                }
+              }
+            }
+          } catch (error) {
+            log('frame-enumeration-error', {
+              href: window.location.href,
+              messageId: data.messageId || null,
+              error: error && error.message ? error.message : String(error)
+            })
+          }
+
+          if (!matchedFrame) {
+            log('frame-match-failed', {
+              href: window.location.href,
+              messageId: data.messageId || null,
+              offsetX,
+              offsetY
+            })
+          }
+
+          const request = data.pinokioScreenshotRequest || {}
+          const originalBounds = request.bounds || {}
+          const parentDpr = window.devicePixelRatio || 1
+          const currentDpr = request.devicePixelRatio && request.devicePixelRatio > 0 ? request.devicePixelRatio : 1
+          const nextStage = (typeof request.__pinokioRelayStage === 'number' ? request.__pinokioRelayStage : 0) + 1
+          request.__pinokioRelayStage = nextStage
+          request.__pinokioRelayComplete = window.parent === window
+
+          if (matchedFrame) {
+            const adjustedBounds = {
+              x: (originalBounds.x || 0) + offsetX,
+              y: (originalBounds.y || 0) + offsetY,
+              width: originalBounds.width || 0,
+              height: originalBounds.height || 0,
+            }
+
+            request.bounds = adjustedBounds
+            request.devicePixelRatio = Math.max(currentDpr, parentDpr)
+            request.__pinokioAdjusted = true
+
+            log('request-adjusted', {
+              href: window.location.href,
+              messageId: data.messageId || null,
+              offsetX,
+              offsetY,
+              parentDpr,
+              resultingBounds: adjustedBounds,
+              originalBounds,
+              resultingDevicePixelRatio: request.devicePixelRatio,
+              relayStage: request.__pinokioRelayStage,
+              relayComplete: request.__pinokioRelayComplete
+            })
+          } else {
+            log('request-forward-unadjusted', {
+              href: window.location.href,
+              messageId: data.messageId || null,
+              relayStage: request.__pinokioRelayStage,
+              relayComplete: request.__pinokioRelayComplete
+            })
+          }
+
+          data.pinokioScreenshotRequest = request
+
+          log('request-forward', {
+            href: window.location.href,
+            messageId: data.messageId || null,
+            matchedFrame,
+            hasParent: Boolean(window.parent && window.parent !== window)
+          })
+
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(data, '*')
+            if (event && typeof event.stopImmediatePropagation === 'function') {
+              event.stopImmediatePropagation()
+            }
+            return
+          }
+
+          const targetSource = event.source
+          const messageId = data.messageId
+          const captureRequest = data.pinokioScreenshotRequest
+          log('top-level-capture', {
+            href: window.location.href,
+            messageId,
+            relayStage: captureRequest.__pinokioRelayStage,
+            relayComplete: captureRequest.__pinokioRelayComplete,
+            adjustedFlag: captureRequest.__pinokioAdjusted,
+            bounds: captureRequest.bounds || null
+          })
+
+          const captureApi = window.electronAPI && typeof window.electronAPI.captureScreenshot === 'function'
+            ? window.electronAPI.captureScreenshot
+            : null
+
+          if (!captureApi) {
+            log('top-level-capture-missing-api', { href: window.location.href })
+            return
+          }
+
+          Promise.resolve()
+            .then(() => captureApi(captureRequest))
+            .then((screenshot) => {
+              log('top-level-capture-success', { href: window.location.href, messageId })
+              try {
+                targetSource.postMessage({
+                  pinokioScreenshotResponse: true,
+                  messageId,
+                  success: true,
+                  screenshot
+                }, '*')
+              } catch (error) {
+                log('top-level-response-error', {
+                  href: window.location.href,
+                  messageId,
+                  error: error && error.message ? error.message : String(error)
+                })
+              }
+            })
+            .catch((error) => {
+              log('top-level-capture-error', {
+                href: window.location.href,
+                messageId,
+                error: error && error.message ? error.message : String(error)
+              })
+              try {
+                targetSource.postMessage({
+                  pinokioScreenshotResponse: true,
+                  messageId,
+                  success: false,
+                  error: error && error.message ? error.message : String(error)
+                }, '*')
+              } catch (responseError) {
+                log('top-level-response-error', {
+                  href: window.location.href,
+                  messageId,
+                  error: responseError && responseError.message ? responseError.message : String(responseError)
+                })
+              }
+            })
+          return
+        }
+
+        if (data.pinokioScreenshotResponse && data.messageId) {
+          log('response-processing', {
+            href: window.location.href,
+            messageId: data.messageId
+          })
+          const target = pending.get(data.messageId)
+          if (target && target !== event.source) {
+            pending.delete(data.messageId)
+            try {
+              log('response-forwarding-down', {
+                href: window.location.href,
+                messageId: data.messageId
+              })
+              target.postMessage(data, '*')
+              return
+            } catch (error) {
+              log('response-forwarding-error', {
+                href: window.location.href,
+                messageId: data.messageId,
+                error: error && error.message ? error.message : String(error)
+              })
+            }
+          }
+
+          log('response-forwarding-up', {
+            href: window.location.href,
+            messageId: data.messageId,
+            hasParent: Boolean(window.parent && window.parent !== window)
+          })
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage(data, '*')
+          }
+        }
+      }, true)
+    } catch (error) {
+      try {
+        console.warn('[Pinokio Screenshot Relay] relay-install-error ' + (error && error.message ? error.message : String(error)))
+      } catch (_) {
+        // ignore logging failures
+      }
+    }
+  }
+  return `(${source.toString()})();`
+}
+
+const installScreenshotRelays = async (frame) => {
+  if (!frame) {
+    return
+  }
+
+  const topFrame = frame.top || frame
+  const frames = flattenFrameTree(topFrame, [])
+  for (const entry of frames) {
+    const candidate = entry && entry.frame
+    if (!candidate || candidate.isDestroyed && candidate.isDestroyed()) {
+      continue
+    }
+    try {
+      await candidate.executeJavaScript(buildScreenshotRelayInjection(), true)
+    } catch (error) {
+      console.warn('Screenshot relay injection failed:', error && error.message ? error.message : error)
+    }
+  }
+}
+
 const startInspectorSession = async (webContents, payload = {}) => {
   const existing = inspectorSessions.get(webContents.id)
   if (existing) {
@@ -514,6 +864,7 @@ const startInspectorSession = async (webContents, payload = {}) => {
     throw new Error('Unable to locate iframe to inspect.')
   }
 
+  await installScreenshotRelays(targetFrame)
   await targetFrame.executeJavaScript(buildInspectorInjection(), true)
 
 
@@ -558,6 +909,22 @@ const stopInspectorSession = async (webContents) => {
   return { frameUrl }
 }
 
+const safeCaptureStringify = (value) => {
+  try {
+    return JSON.stringify(value)
+  } catch (_) {
+    return '"[unserializable]"'
+  }
+}
+
+const captureLog = (label, payload) => {
+  try {
+    console.log('[Pinokio Capture] ' + label + ' ' + safeCaptureStringify(payload))
+  } catch (_) {
+    console.log('[Pinokio Capture] ' + label)
+  }
+}
+
 const installInspectorHandlers = () => {
   console.log('Installing inspector handlers...')
   if (inspectorHandlersInstalled) {
@@ -593,6 +960,37 @@ const installInspectorHandlers = () => {
 
   ipcMain.handle('pinokio:capture-screenshot-debug', async (event, payload) => {
     const { screenshotRequest } = payload
+
+    const emitDebug = (label, data) => {
+      captureLog(label, data)
+      try {
+        event.sender.send('pinokio:capture-debug-log', {
+          label,
+          payload: data
+        })
+      } catch (_) {
+        // ignore renderer emit errors
+      }
+    }
+
+    emitDebug('handler-invoked', {
+      senderId: event && event.sender ? event.sender.id : null,
+      hasRequest: Boolean(screenshotRequest),
+      bounds: screenshotRequest && screenshotRequest.bounds ? {
+        x: screenshotRequest.bounds.x,
+        y: screenshotRequest.bounds.y,
+        width: screenshotRequest.bounds.width,
+        height: screenshotRequest.bounds.height,
+      } : null,
+      devicePixelRatio: screenshotRequest ? screenshotRequest.devicePixelRatio : null,
+      adjustedFlag: Boolean(screenshotRequest && screenshotRequest.__pinokioAdjusted),
+      relayStage: screenshotRequest && typeof screenshotRequest.__pinokioRelayStage !== 'undefined' ? screenshotRequest.__pinokioRelayStage : null,
+      relayComplete: screenshotRequest && typeof screenshotRequest.__pinokioRelayComplete !== 'undefined' ? screenshotRequest.__pinokioRelayComplete : null,
+      frameOffset: screenshotRequest && screenshotRequest.frameOffset ? {
+        x: screenshotRequest.frameOffset.x,
+        y: screenshotRequest.frameOffset.y,
+      } : null
+    })
     if (!screenshotRequest || !screenshotRequest.bounds) {
       throw new Error('Invalid screenshot request')
     }
@@ -606,30 +1004,73 @@ const installInspectorHandlers = () => {
     try {
       const bounds = screenshotRequest.bounds
       const dpr = screenshotRequest.devicePixelRatio || 1
-      
-      // Get the frame's position relative to the top window
-      const framePosition = await session.frame.executeJavaScript(`
-        (function() {
-          let x = 0, y = 0;
-          let currentWindow = window;
-          
-          while (currentWindow !== window.top) {
-            const frameElement = currentWindow.frameElement;
-            if (frameElement) {
-              const rect = frameElement.getBoundingClientRect();
-              x += rect.left;
-              y += rect.top;
-            }
-            currentWindow = currentWindow.parent;
+      const alreadyAdjusted = Boolean(screenshotRequest.__pinokioAdjusted)
+
+      emitDebug('incoming-bounds', {
+        senderId: event && event.sender ? event.sender.id : null,
+        bounds,
+        devicePixelRatio: dpr,
+        alreadyAdjusted,
+        relayStage: screenshotRequest && typeof screenshotRequest.__pinokioRelayStage !== 'undefined' ? screenshotRequest.__pinokioRelayStage : null,
+        relayComplete: screenshotRequest && typeof screenshotRequest.__pinokioRelayComplete !== 'undefined' ? screenshotRequest.__pinokioRelayComplete : null
+      })
+
+      let framePosition = { x: 0, y: 0 }
+
+      if (!alreadyAdjusted) {
+        try {
+          framePosition = await session.frame.executeJavaScript(`
+            (function() {
+              let x = 0, y = 0;
+              let currentWindow = window;
+
+              while (currentWindow !== window.top) {
+                try {
+                  const frameElement = currentWindow.frameElement;
+                  if (frameElement) {
+                    const rect = frameElement.getBoundingClientRect();
+                    x += rect.left;
+                    y += rect.top;
+                  }
+                } catch (error) {
+                  return { x, y, crossOriginBlocked: true };
+                }
+                currentWindow = currentWindow.parent;
+              }
+
+              return { x, y };
+            })();
+          `)
+          if (framePosition && framePosition.crossOriginBlocked) {
+            framePosition = { x: framePosition.x || 0, y: framePosition.y || 0 }
           }
-          
-          return { x, y };
-        })();
-      `)
+        } catch (error) {
+          console.warn('Unable to determine frame offset via DOM script:', error)
+          framePosition = { x: 0, y: 0 }
+          emitDebug('frame-position-fallback', {
+            senderId: event && event.sender ? event.sender.id : null,
+            error: error && error.message ? error.message : String(error)
+          })
+        }
+      }
+
+      emitDebug('frame-position-computed', {
+        senderId: event && event.sender ? event.sender.id : null,
+        alreadyAdjusted,
+        framePosition,
+        bounds,
+        devicePixelRatio: dpr,
+        relayStage: screenshotRequest && typeof screenshotRequest.__pinokioRelayStage !== 'undefined' ? screenshotRequest.__pinokioRelayStage : null,
+        relayComplete: screenshotRequest && typeof screenshotRequest.__pinokioRelayComplete !== 'undefined' ? screenshotRequest.__pinokioRelayComplete : null
+      })
       
       // Capture full page and crop to element bounds
       const fullImage = await event.sender.capturePage()
       const fullSize = fullImage.getSize()
+      emitDebug('capture-page-size', {
+        senderId: event && event.sender ? event.sender.id : null,
+        fullSize
+      })
       
       // Calculate crop bounds with frame position and device pixel ratio
       const cropBounds = {
@@ -644,13 +1085,29 @@ const installInspectorHandlers = () => {
       cropBounds.y = Math.max(0, Math.min(cropBounds.y, fullSize.height - 1))
       cropBounds.width = Math.min(cropBounds.width, fullSize.width - cropBounds.x)
       cropBounds.height = Math.min(cropBounds.height, fullSize.height - cropBounds.y)
+      emitDebug('crop-bounds', {
+        senderId: event && event.sender ? event.sender.id : null,
+        framePosition,
+        dpr,
+        validatedCropBounds: cropBounds,
+        fullSize
+      })
       
       const croppedImage = fullImage.crop(cropBounds)
       const buffer = croppedImage.toPNG()
+      emitDebug('capture-success', {
+        senderId: event && event.sender ? event.sender.id : null,
+        cropWidth: cropBounds.width,
+        cropHeight: cropBounds.height
+      })
       
       return 'data:image/png;base64,' + buffer.toString('base64')
     } catch (error) {
       console.error('Screenshot capture failed:', error)
+      emitDebug('capture-error', {
+        senderId: event && event.sender ? event.sender.id : null,
+        error: error && error.message ? error.message : String(error)
+      })
       throw error
     }
   })

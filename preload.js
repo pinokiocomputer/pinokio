@@ -688,33 +688,76 @@ window.electronAPI = {
     showOverlay('Inspect mode enabled – hover items and click to capture.', url || '', null)
   })
 
+  ipcRenderer.on('pinokio:capture-debug-log', (_event, payload) => {
+    try {
+      const serialized = JSON.stringify(payload)
+      console.log('[Pinokio Capture]', serialized)
+    } catch (error) {
+      console.log('[Pinokio Capture]', payload)
+    }
+  })
+
+  const logCaptureEvent = (label, payload) => {
+    try {
+      console.log('[Pinokio Capture]', JSON.stringify({ label, payload }))
+    } catch (error) {
+      console.log('[Pinokio Capture]', label)
+    }
+  }
+
+  const processScreenshotRequest = async (screenshotRequest, messageId, source) => {
+    logCaptureEvent('renderer-process-start', {
+      messageId,
+      relayStage: screenshotRequest && screenshotRequest.__pinokioRelayStage,
+      relayComplete: screenshotRequest && screenshotRequest.__pinokioRelayComplete,
+      adjustedFlag: screenshotRequest && screenshotRequest.__pinokioAdjusted,
+      bounds: screenshotRequest && screenshotRequest.bounds ? screenshotRequest.bounds : null
+    })
+    try {
+      const screenshot = await window.electronAPI.captureScreenshot(screenshotRequest)
+
+      source.postMessage({
+        pinokioScreenshotResponse: true,
+        messageId: messageId,
+        success: true,
+        screenshot: screenshot
+      }, '*')
+    } catch (error) {
+      console.error('Screenshot capture failed:', error)
+
+      source.postMessage({
+        pinokioScreenshotResponse: true,
+        messageId,
+        success: false,
+        error: error.message || 'Screenshot failed'
+      }, '*')
+    }
+  }
+
   // Handle screenshot requests from iframes  
   const handleScreenshotMessage = async (event) => {
     if (event.data && event.data.pinokioScreenshotRequest) {
-      try {
-        const screenshotRequest = event.data.pinokioScreenshotRequest
-        const messageId = event.data.messageId
-        
-        const screenshot = await window.electronAPI.captureScreenshot(screenshotRequest)
-        
-        // Send response back to iframe
-        event.source.postMessage({
-          pinokioScreenshotResponse: true,
-          messageId: messageId,
-          success: true,
-          screenshot: screenshot
-        }, '*')
-      } catch (error) {
-        console.error('Screenshot capture failed:', error)
-        
-        // Send error response back to iframe
-        event.source.postMessage({
-          pinokioScreenshotResponse: true,
-          messageId: event.data.messageId,
-          success: false,
-          error: error.message || 'Screenshot failed'
-        }, '*')
+      if (window !== window.top) {
+        logCaptureEvent('renderer-ignored-non-top', {
+          currentHref: window.location.href
+        })
+        return
       }
+      const screenshotRequest = event.data.pinokioScreenshotRequest
+      const messageId = event.data.messageId
+      const source = event.source
+
+      logCaptureEvent('renderer-message-received', {
+        messageId,
+        relayStage: screenshotRequest.__pinokioRelayStage,
+        relayComplete: screenshotRequest.__pinokioRelayComplete,
+        adjustedFlag: screenshotRequest.__pinokioAdjusted,
+        bounds: screenshotRequest && screenshotRequest.bounds ? screenshotRequest.bounds : null
+      })
+      logCaptureEvent('renderer-skip-delegated', {
+        messageId
+      })
+      return
     }
   }
 
