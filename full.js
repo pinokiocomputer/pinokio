@@ -205,6 +205,24 @@ const updateBrowserConsoleTarget = (webContents, url) => {
 const inspectorSessions = new Map()
 let inspectorHandlersInstalled = false
 
+const inspectorLogFile = path.join(os.tmpdir(), 'pinokio-inspector.log')
+
+const inspectorMainLog = (label, payload) => {
+  try {
+    const serialized = payload === undefined ? '' : ' ' + JSON.stringify(payload)
+    const line = `[InspectorMain] ${label}${serialized}\n`
+    try {
+      fs.appendFileSync(inspectorLogFile, line)
+    } catch (_) {}
+    process.stdout.write(line)
+  } catch (_) {
+    try {
+      fs.appendFileSync(inspectorLogFile, `[InspectorMain] ${label}\n`)
+    } catch (_) {}
+    process.stdout.write(`[InspectorMain] ${label}\n`)
+  }
+}
+
 const normalizeInspectorUrl = (value) => {
   if (!value) {
     return null
@@ -233,7 +251,13 @@ const flattenFrameTree = (frame, acc = [], depth = 0) => {
   if (!frame) {
     return acc
   }
-  acc.push({ frame, depth, url: normalizeInspectorUrl(frame.url || '') })
+  let frameName = null
+  try {
+    frameName = typeof frame.name === 'string' && frame.name.length ? frame.name : null
+  } catch (_) {
+    frameName = null
+  }
+  acc.push({ frame, depth, url: normalizeInspectorUrl(frame.url || ''), name: frameName })
   const children = Array.isArray(frame.frames) ? frame.frames : []
   for (const child of children) {
     flattenFrameTree(child, acc, depth + 1)
@@ -241,18 +265,116 @@ const flattenFrameTree = (frame, acc = [], depth = 0) => {
   return acc
 }
 
+const findDescendantByUrl = (frame, targetUrl) => {
+  if (!frame || !targetUrl) {
+    return null
+  }
+  const normalizedTarget = normalizeInspectorUrl(targetUrl)
+  if (!normalizedTarget) {
+    return null
+  }
+  const stack = [frame]
+  while (stack.length) {
+    const current = stack.pop()
+    try {
+      const currentUrl = normalizeInspectorUrl(current.url || '')
+      if (currentUrl && urlsRoughlyMatch(normalizedTarget, currentUrl)) {
+        return current
+      }
+    } catch (_) {}
+    const children = Array.isArray(current.frames) ? current.frames : []
+    for (const child of children) {
+      if (child) {
+        stack.push(child)
+      }
+    }
+  }
+  return null
+}
+
 const selectTargetFrame = (webContents, payload = {}) => {
   if (!webContents || !webContents.mainFrame) {
+    inspectorMainLog('no-webcontents', {})
     return null
   }
   const frames = flattenFrameTree(webContents.mainFrame, [])
   if (!frames.length) {
+    inspectorMainLog('no-frames', { webContentsId: webContents.id })
     return null
   }
+  inspectorMainLog('incoming', {
+    frameUrl: payload.frameUrl || null,
+    frameName: payload.frameName || null,
+    frameNodeId: payload.frameNodeId || null,
+    frameCount: frames.length,
+  })
 
   const canonicalUrl = normalizeInspectorUrl(payload.frameUrl)
   const relativeOrdinal = typeof payload.candidateRelativeOrdinal === 'number' ? payload.candidateRelativeOrdinal : null
   const globalOrdinal = typeof payload.frameIndex === 'number' ? payload.frameIndex : null
+  const canonicalFrameName = typeof payload.frameName === 'string' && payload.frameName.trim() ? payload.frameName.trim() : null
+  const canonicalFrameNodeId = typeof payload.frameNodeId === 'string' && payload.frameNodeId.trim() ? payload.frameNodeId.trim() : null
+
+  if (canonicalFrameName || canonicalFrameNodeId) {
+    inspectorMainLog('identifier-search', {
+      frameName: canonicalFrameName || null,
+      frameNodeId: canonicalFrameNodeId || null,
+      names: frames.map((entry) => entry.name || null).slice(0, 12),
+    })
+
+    let identifierMatch = null
+    if (canonicalFrameNodeId) {
+      identifierMatch = frames.find((entry) => entry && entry.name === canonicalFrameNodeId) || null
+      if (identifierMatch) {
+        const normalizedUrl = normalizeInspectorUrl(identifierMatch.url || '')
+        if (canonicalUrl && (!normalizedUrl || !urlsRoughlyMatch(canonicalUrl, normalizedUrl))) {
+          const descendant = findDescendantByUrl(identifierMatch.frame, canonicalUrl)
+          if (descendant) {
+            inspectorMainLog('identifier-match-node-descendant', {
+              index: frames.indexOf(identifierMatch),
+              name: identifierMatch.name || null,
+              url: identifierMatch.url || null,
+              descendantUrl: normalizeInspectorUrl(descendant.url || ''),
+            })
+            return descendant
+          }
+        }
+        inspectorMainLog('identifier-match-node', {
+          index: frames.indexOf(identifierMatch),
+          name: identifierMatch.name || null,
+          url: identifierMatch.url || null,
+        })
+        return identifierMatch.frame
+      }
+    }
+
+    if (canonicalFrameName) {
+      identifierMatch = frames.find((entry) => entry && entry.name === canonicalFrameName) || null
+      if (identifierMatch) {
+        const normalizedUrl = normalizeInspectorUrl(identifierMatch.url || '')
+        if (canonicalUrl && (!normalizedUrl || !urlsRoughlyMatch(canonicalUrl, normalizedUrl))) {
+          const descendant = findDescendantByUrl(identifierMatch.frame, canonicalUrl)
+          if (descendant) {
+            inspectorMainLog('identifier-match-name-descendant', {
+              index: frames.indexOf(identifierMatch),
+              name: identifierMatch.name || null,
+              url: identifierMatch.url || null,
+              descendantUrl: normalizeInspectorUrl(descendant.url || ''),
+            })
+            return descendant
+          }
+        }
+        inspectorMainLog('identifier-match-name', {
+          index: frames.indexOf(identifierMatch),
+          name: identifierMatch.name || null,
+          url: identifierMatch.url || null,
+        })
+        return identifierMatch.frame
+      }
+    }
+
+    inspectorMainLog('identifier-miss', {})
+  }
 
   let matches = frames
   if (canonicalUrl) {
@@ -264,18 +386,38 @@ const selectTargetFrame = (webContents, payload = {}) => {
       const filtered = matches.slice().sort((a, b) => a.depth - b.depth || frames.indexOf(a) - frames.indexOf(b))
       const targetEntry = filtered[Math.min(Math.max(relativeOrdinal, 0), filtered.length - 1)]
       if (targetEntry) {
+        inspectorMainLog('relative-ordinal-match', {
+          index: frames.indexOf(targetEntry),
+          name: targetEntry.name || null,
+          url: targetEntry.url || null,
+        })
         return targetEntry.frame
       }
     }
     const fallbackEntry = matches[0]
     if (fallbackEntry) {
+      inspectorMainLog('fallback-match', {
+        index: frames.indexOf(fallbackEntry),
+        name: fallbackEntry.name || null,
+        url: fallbackEntry.url || null,
+      })
       return fallbackEntry.frame
     }
   }
 
   if (globalOrdinal !== null && frames[globalOrdinal]) {
+    inspectorMainLog('global-ordinal-match', {
+      index: globalOrdinal,
+      name: frames[globalOrdinal].name || null,
+      url: frames[globalOrdinal].url || null,
+    })
     return frames[globalOrdinal].frame
   }
+
+  inspectorMainLog('default-match', {
+    name: frames[0]?.name || null,
+    url: frames[0]?.url || null,
+  })
 
   return frames[0]?.frame || null
 }

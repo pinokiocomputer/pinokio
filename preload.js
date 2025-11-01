@@ -763,6 +763,69 @@ window.electronAPI = {
 
   window.addEventListener('message', handleInspectorMessage)
   window.addEventListener('message', handleScreenshotMessage)
+  window.addEventListener('message', (event) => {
+    if (!event || !event.data || event.source === window) {
+      return
+    }
+    if (event.data.e !== 'pinokio-start-inspector') {
+      return
+    }
+
+    try {
+      console.log('[Inspector] start-request ' + JSON.stringify({
+        url: event.data.frameUrl || null,
+        name: event.data.frameName || null,
+        nodeId: event.data.frameNodeId || null,
+        active: state.active,
+      }))
+    } catch (_) {}
+
+    const payload = {}
+    if (typeof event.data.frameUrl === 'string' && event.data.frameUrl.trim()) {
+      payload.frameUrl = event.data.frameUrl.trim()
+    }
+    if (typeof event.data.frameName === 'string' && event.data.frameName.trim()) {
+      payload.frameName = event.data.frameName.trim()
+    }
+    if (typeof event.data.frameNodeId === 'string' && event.data.frameNodeId.trim()) {
+      payload.frameNodeId = event.data.frameNodeId.trim()
+    }
+
+    if (!payload.frameUrl && !payload.frameName && !payload.frameNodeId) {
+      return
+    }
+
+    if (state.active) {
+      try {
+        console.log('[Inspector] stopping-current-before-start')
+      } catch (_) {}
+      stopInspector()
+    }
+
+    hideOverlay()
+
+    state.active = true
+    state.button = null
+    state.lastFrameOrdinal = null
+    state.lastRelativeOrdinal = null
+    state.lastUrl = payload.frameUrl || null
+    state.lastDomPath = null
+
+    showOverlay('Inspect mode enabled – hover items and click to capture.', payload.frameUrl || '', null)
+
+    window.electronAPI.startInspector(payload).then(() => {
+      try {
+        console.log('[Inspector] ipc-start-success ' + JSON.stringify(payload))
+      } catch (_) {}
+    }).catch((error) => {
+      const message = error && error.message ? error.message : 'Unable to start inspect mode.'
+      showOverlay(message, payload.frameUrl || '', null)
+      try {
+        console.log('[Inspector] ipc-start-error ' + JSON.stringify({ message }))
+      } catch (_) {}
+      resetState()
+    })
+  })
   document.addEventListener('click', handleToggleClick, true)
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.active) {
