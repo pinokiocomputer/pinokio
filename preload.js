@@ -36,8 +36,6 @@ if (window.parent === window.top) {
     }, 100);
     window.addEventListener("message", (event) => {
       if (event.data) {
-        console.log("event.data = ", event.data)
-        console.log("location.href = ", location.href)
         if (event.data.action === "back") {
           history.back()
         } else if (event.data.action === "forward") {
