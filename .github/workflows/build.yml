@@ -34,8 +34,36 @@ jobs:
             --notes-file RELEASE.md
 #            --notes "Pinokio version $PACKAGE_VERSION."
 
-  windows:
+  windows-unsigned:
 #    if: false
+    needs: "create-release"
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v1
+
+      - name: Install Node.js, NPM and Yarn
+        uses: actions/setup-node@v1
+        with:
+          node-version: 22
+
+      - name: Build/release Electron app
+        id: electron-builder
+        uses: samuelmeuli/action-electron-builder@v1.6.0
+        with:
+          github_token: ${{ secrets.github_token }}
+
+          # If the commit is tagged with a version (e.g. "v1.0.0"),
+          # release the app after building
+          #release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          release: true
+          #args: --win --dir  # Build win-unpacked only
+          args: --win
+
+  windows:
+    if: false
     needs: "create-release"
     runs-on: windows-latest
     permissions:
