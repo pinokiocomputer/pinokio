@@ -36,6 +36,7 @@ const applyTitleBarOverlayToAllWindows = () => {
   }
 }
 const updateThemeColors = (payload = {}) => {
+  console.log("updateThemeColors", payload)
   const nextTheme = payload.theme
   const nextColors = payload.colors
   if (nextTheme) {
