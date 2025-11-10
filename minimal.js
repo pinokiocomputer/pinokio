@@ -7,7 +7,23 @@ const pinokiod = new Pinokiod(config)
 const updater = new Updater()
 let tray
 let hiddenWindow
+let rootUrl
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+}
+
+app.on('second-instance', () => {
+  if (rootUrl) {
+    shell.openExternal(rootUrl)
+  }
+})
+
 app.whenReady().then(async () => {
+  if (!gotTheLock) {
+    return
+  }
   await pinokiod.start({
     onquit: () => {
       app.quit()
@@ -24,6 +40,7 @@ app.whenReady().then(async () => {
       }
     }
   })
+  rootUrl = `http://localhost:${pinokiod.port}`
   if (process.platform === 'darwin') app.dock.hide();
   let icon = nativeImage.createFromPath(path.resolve(process.resourcesPath, "assets/icon_small.png"))
   icon = icon.resize({
@@ -33,7 +50,7 @@ app.whenReady().then(async () => {
   console.log('isEmpty:', icon.isEmpty()); // if true, image failed to load
   tray = new Tray(icon)
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Open in Browser', click: () => shell.openExternal("http://localhost:42000") },
+    { label: 'Open in Browser', click: () => shell.openExternal(rootUrl) },
     { label: 'Restart', click: () => { app.relaunch(); app.exit(); } },
     { label: 'Quit', click: () => app.quit() }
   ]);
@@ -42,7 +59,7 @@ app.whenReady().then(async () => {
   tray.on('click', () => {
     tray.popUpContextMenu(contextMenu);
   });
-  shell.openExternal("http://localhost:42000");
+  shell.openExternal(rootUrl);
   hiddenWindow = new BrowserWindow({ show: false });
 
   updater.run(hiddenWindow)
