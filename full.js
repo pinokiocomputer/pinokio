@@ -14,6 +14,17 @@ var pinned = {}
 var launched
 var theme
 var colors
+const setWindowTitleBarOverlay = (win, overlay) => {
+  if (!win || !win.setTitleBarOverlay) {
+    return
+  }
+  try {
+    if (platform === 'win32') {
+      win.setTitleBarOverlay(false)
+    }
+    win.setTitleBarOverlay(overlay)
+  } catch (_) {}
+}
 const applyTitleBarOverlayToAllWindows = () => {
   if (!colors) {
     return
@@ -21,11 +32,7 @@ const applyTitleBarOverlayToAllWindows = () => {
   const overlay = titleBarOverlay(colors)
   const browserWindows = BrowserWindow.getAllWindows()
   for (const win of browserWindows) {
-    if (win && win.setTitleBarOverlay) {
-      try {
-        win.setTitleBarOverlay(overlay)
-      } catch (err) {}
-    }
+    setWindowTitleBarOverlay(win, overlay)
   }
 }
 const updateThemeColors = (payload = {}) => {
@@ -1611,9 +1618,9 @@ const attach = (event, webContents) => {
 //  })
   webContents.on('did-navigate', (event, url) => {
     let win = webContents.getOwnerBrowserWindow()
-    if (win && win.setTitleBarOverlay && typeof win.setTitleBarOverlay === "function") {
+    if (win && typeof win.setTitleBarOverlay === "function") {
       const overlay = titleBarOverlay(colors)
-      win.setTitleBarOverlay(overlay)
+      setWindowTitleBarOverlay(win, overlay)
     }
     launched = true
 
@@ -2075,13 +2082,9 @@ document.querySelector("form").addEventListener("submit", (e) => {
     })
     app.on('browser-window-created', (event, win) => {
       if (win.type !== "splash") {
-        if (win.setTitleBarOverlay) {
+        if (win && typeof win.setTitleBarOverlay === 'function') {
           const overlay = titleBarOverlay(colors)
-          try {
-            win.setTitleBarOverlay(overlay)
-          } catch (e) {
-  //          console.log("ERROR", e)
-          }
+          setWindowTitleBarOverlay(win, overlay)
         }
       }
     })
@@ -2104,9 +2107,9 @@ document.querySelector("form").addEventListener("submit", (e) => {
     let all = BrowserWindow.getAllWindows()
     for(win of all) {
       try {
-        if (win.setTitleBarOverlay) {
+        if (win && typeof win.setTitleBarOverlay === 'function') {
           const overlay = titleBarOverlay(colors)
-          win.setTitleBarOverlay(overlay)
+          setWindowTitleBarOverlay(win, overlay)
         }
       } catch (e) {
   //      console.log("E2", e)
