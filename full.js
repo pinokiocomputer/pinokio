@@ -21,9 +21,18 @@ const setWindowTitleBarOverlay = (win, overlay) => {
   try {
     if (platform === 'win32') {
       win.setTitleBarOverlay(false)
+      setTimeout(() => {
+        try {
+          console.log("calling setTitlebarOverlay", overlay)
+          win.setTitleBarOverlay(overlay)
+        } catch (_) {}
+      }, 0)
+      return
     }
     win.setTitleBarOverlay(overlay)
-  } catch (_) {}
+  } catch (e) {
+    console.log("ERROR", e)
+  }
 }
 const applyTitleBarOverlayToAllWindows = () => {
   if (!colors) {
