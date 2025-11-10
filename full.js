@@ -14,6 +14,31 @@ var pinned = {}
 var launched
 var theme
 var colors
+const applyTitleBarOverlayToAllWindows = () => {
+  if (!colors) {
+    return
+  }
+  const overlay = titleBarOverlay(colors)
+  const browserWindows = BrowserWindow.getAllWindows()
+  for (const win of browserWindows) {
+    if (win && win.setTitleBarOverlay) {
+      try {
+        win.setTitleBarOverlay(overlay)
+      } catch (err) {}
+    }
+  }
+}
+const updateThemeColors = (payload = {}) => {
+  const nextTheme = payload.theme
+  const nextColors = payload.colors
+  if (nextTheme) {
+    theme = nextTheme
+  }
+  if (nextColors) {
+    colors = nextColors
+  }
+  applyTitleBarOverlayToAllWindows()
+}
 let PORT
 //let PORT = 42000
 //let PORT = (platform === 'linux' ? 42000 : 80)
@@ -1585,8 +1610,6 @@ const attach = (event, webContents) => {
 //    view.webContents.loadURL(details.url);
 //  })
   webContents.on('did-navigate', (event, url) => {
-    theme = pinokiod.theme
-    colors = pinokiod.colors
     let win = webContents.getOwnerBrowserWindow()
     if (win && win.setTitleBarOverlay && typeof win.setTitleBarOverlay === "function") {
       const overlay = titleBarOverlay(colors)
@@ -1999,6 +2022,13 @@ document.querySelector("form").addEventListener("submit", (e) => {
         app.relaunch();
         app.exit()
       },
+      onrefresh: (payload) => {
+        try {
+          updateThemeColors(payload || { theme: pinokiod.theme, colors: pinokiod.colors })
+        } catch (err) {
+          console.error('Failed to sync title bar theme', err)
+        }
+      },
       browser: {
         clearCache: async () => {
           console.log('clear cache from all sessions')
@@ -2019,13 +2049,6 @@ document.querySelector("form").addEventListener("submit", (e) => {
       }
     })
     PORT = pinokiod.port
-
-    theme = pinokiod.theme
-    colors = pinokiod.colors
-
-    
-    
-
     app.on('web-contents-created', attach)
     app.on('activate', function () {
       if (BrowserWindow.getAllWindows().length === 0) createWindow(PORT)
