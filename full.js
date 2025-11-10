@@ -1898,7 +1898,10 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
     }
-    let url = argv.pop()
+    const url = [...argv].reverse().find(arg => typeof arg === 'string' && arg.startsWith('pinokio:'))
+    if (!url) {
+      return
+    }
     //let u = new URL(url).search
     let u = url.replace(/pinokio:[\/]+/, "")
     loadNewWindow(`${root_url}/pinokio/${u}`, PORT)
