@@ -1,5 +1,7 @@
-const { app, Tray, Menu, shell, nativeImage } = require('electron');
+const { app, Tray, Menu, shell, nativeImage, BrowserWindow, session } = require('electron');
 const path = require('path')
+const os = require('os')
+const fs = require('fs')
 const Pinokiod = require("pinokiod")
 const config = require('./config')
 const Updater = require('./updater')
@@ -8,6 +10,111 @@ const updater = new Updater()
 let tray
 let hiddenWindow
 let rootUrl
+let splashWindow
+let splashIcon
+
+const getLogFileHint = () => {
+  try {
+    if (pinokiod && pinokiod.kernel && pinokiod.kernel.homedir) {
+      return path.resolve(pinokiod.kernel.homedir, "logs", "stdout.txt")
+    }
+  } catch (err) {
+  }
+  return path.resolve(os.homedir(), ".pinokio", "logs", "stdout.txt")
+}
+const ensureSplashWindow = () => {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    return splashWindow
+  }
+  splashWindow = new BrowserWindow({
+    width: 420,
+    height: 320,
+    frame: false,
+    resizable: false,
+    transparent: true,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
+    webPreferences: {
+      backgroundThrottling: false
+    }
+  })
+  splashWindow.on('closed', () => {
+    splashWindow = null
+  })
+  return splashWindow
+}
+const getSplashIcon = () => {
+  if (splashIcon) {
+    return splashIcon
+  }
+  const candidates = [
+    path.join('assets', 'icon.png'),
+    path.join('assets', 'icon_small@2x.png'),
+    path.join('assets', 'icon_small.png'),
+    'icon2.png'
+  ]
+  for (const relative of candidates) {
+    const absolute = path.join(__dirname, relative)
+    if (fs.existsSync(absolute)) {
+      splashIcon = relative.split(path.sep).join('/')
+      return splashIcon
+    }
+  }
+  splashIcon = path.join('assets', 'icon_small.png').split(path.sep).join('/')
+  return splashIcon
+}
+const updateSplashWindow = ({ state = 'loading', message, detail, logPath, icon } = {}) => {
+  const win = ensureSplashWindow()
+  const query = { state }
+  if (message) {
+    query.message = message
+  }
+  if (detail) {
+    const trimmed = detail.length > 800 ? `${detail.slice(0, 800)}…` : detail
+    query.detail = trimmed
+  }
+  if (logPath) {
+    query.log = logPath
+  }
+  if (icon) {
+    query.icon = icon
+  }
+  win.loadFile(path.join(__dirname, 'splash.html'), { query }).finally(() => {
+    if (!win.isDestroyed()) {
+      win.show()
+    }
+  })
+}
+const closeSplashWindow = () => {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close()
+  }
+}
+const showStartupError = ({ message, detail, error } = {}) => {
+  const formatted = detail || formatStartupError(error)
+  updateSplashWindow({
+    state: 'error',
+    message: message || 'Pinokio could not start',
+    detail: formatted,
+    logPath: getLogFileHint(),
+    icon: getSplashIcon()
+  })
+}
+const formatStartupError = (error) => {
+  if (!error) return ''
+  if (error.stack) {
+    return `${error.message || 'Unknown error'}\n\n${error.stack}`
+  }
+  if (error.message) return error.message
+  if (typeof error === 'string') return error
+  try {
+    return JSON.stringify(error, null, 2)
+  } catch (err) {
+    return String(error)
+  }
+}
 const gotTheLock = app.requestSingleInstanceLock()
 
 if (!gotTheLock) {
@@ -24,22 +131,46 @@ app.whenReady().then(async () => {
   if (!gotTheLock) {
     return
   }
-  await pinokiod.start({
-    onquit: () => {
-      app.quit()
-    },
-    onrestart: () => {
-      app.relaunch();
-      app.exit()
-    },
-    browser: {
-      clearCache: async () => {
-        console.log('clear cache', session.defaultSession)
-        await session.defaultSession.clearStorageData()
-        console.log("cleared")
-      }
-    }
+  updateSplashWindow({
+    state: 'loading',
+    message: 'Starting Pinokio…',
+    icon: getSplashIcon()
   })
+  try {
+    try {
+      const portInUse = await pinokiod.running(pinokiod.port)
+      if (portInUse) {
+        showStartupError({
+          message: 'Pinokio is already running',
+          detail: `An existing Pinokio instance is using port ${pinokiod.port}. Please close it before launching another.`
+        })
+        return
+      }
+    } catch (checkError) {
+      console.warn('Failed to verify pinokio port availability', checkError)
+    }
+    await pinokiod.start({
+      onquit: () => {
+        app.quit()
+      },
+      onrestart: () => {
+        app.relaunch();
+        app.exit()
+      },
+      browser: {
+        clearCache: async () => {
+          console.log('clear cache', session.defaultSession)
+          await session.defaultSession.clearStorageData()
+          console.log("cleared")
+        }
+      }
+    })
+  } catch (error) {
+    console.error('Failed to start pinokiod', error)
+    showStartupError({ error })
+    return
+  }
+  closeSplashWindow()
   rootUrl = `http://localhost:${pinokiod.port}`
   if (process.platform === 'darwin') app.dock.hide();
   let icon = nativeImage.createFromPath(path.resolve(process.resourcesPath, "assets/icon_small.png"))

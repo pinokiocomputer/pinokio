@@ -14,6 +14,8 @@ var pinned = {}
 var launched
 var theme
 var colors
+var splashWindow
+var splashIcon
 const setWindowTitleBarOverlay = (win, overlay) => {
   if (!win || !win.setTitleBarOverlay) {
     return
@@ -186,6 +188,114 @@ const titleBarOverlay = (colors) => {
     return false
   } else {
     return colors
+  }
+}
+const getLogFileHint = () => {
+  try {
+    if (pinokiod && pinokiod.kernel && pinokiod.kernel.homedir) {
+      return path.resolve(pinokiod.kernel.homedir, "logs", "stdout.txt")
+    }
+  } catch (err) {
+  }
+  return path.resolve(os.homedir(), ".pinokio", "logs", "stdout.txt")
+}
+const getSplashIcon = () => {
+  if (splashIcon) {
+    return splashIcon
+  }
+  const candidates = [
+    path.join('assets', 'icon.png'),
+    path.join('assets', 'icon_small@2x.png'),
+    path.join('assets', 'icon_small.png'),
+    'icon2.png'
+  ]
+  for (const relative of candidates) {
+    const absolute = path.join(__dirname, relative)
+    if (fs.existsSync(absolute)) {
+      splashIcon = relative.split(path.sep).join('/')
+      return splashIcon
+    }
+  }
+  splashIcon = path.join('assets', 'icon_small.png').split(path.sep).join('/')
+  return splashIcon
+}
+const ensureSplashWindow = () => {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    return splashWindow
+  }
+  splashWindow = new BrowserWindow({
+    width: 420,
+    height: 320,
+    frame: false,
+    resizable: false,
+    transparent: true,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
+    webPreferences: {
+      backgroundThrottling: false
+    }
+  })
+  splashWindow.on('closed', () => {
+    splashWindow = null
+  })
+  return splashWindow
+}
+const updateSplashWindow = ({ state = 'loading', message, detail, logPath, icon } = {}) => {
+  const win = ensureSplashWindow()
+  const query = { state }
+  if (message) {
+    query.message = message
+  }
+  if (detail) {
+    const trimmed = detail.length > 800 ? `${detail.slice(0, 800)}…` : detail
+    query.detail = trimmed
+  }
+  if (logPath) {
+    query.log = logPath
+  }
+  if (icon) {
+    query.icon = icon
+  }
+  win.loadFile(path.join(__dirname, 'splash.html'), { query }).finally(() => {
+    if (!win.isDestroyed()) {
+      win.show()
+    }
+  })
+}
+const closeSplashWindow = () => {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close()
+  }
+}
+const showStartupError = ({ message, detail, error } = {}) => {
+  const formatted = detail || formatStartupError(error)
+  updateSplashWindow({
+    state: 'error',
+    message: message || 'Pinokio could not start',
+    detail: formatted,
+    logPath: getLogFileHint(),
+    icon: getSplashIcon()
+  })
+}
+const formatStartupError = (error) => {
+  if (!error) {
+    return ''
+  }
+  if (error.stack) {
+    return `${error.message || 'Unknown error'}\n\n${error.stack}`
+  }
+  if (error.message) {
+    return error.message
+  }
+  if (typeof error === 'string') {
+    return error
+  }
+  try {
+    return JSON.stringify(error, null, 2)
+  } catch (err) {
+    return String(error)
   }
 }
 function UpsertKeyValue(obj, keyToChange, value) {
@@ -2021,40 +2131,64 @@ document.querySelector("form").addEventListener("submit", (e) => {
     })
 
 
-    await pinokiod.start({
-      onquit: () => {
-        app.quit()
-      },
-      onrestart: () => {
-        app.relaunch();
-        app.exit()
-      },
-      onrefresh: (payload) => {
-        try {
-          updateThemeColors(payload || { theme: pinokiod.theme, colors: pinokiod.colors })
-        } catch (err) {
-          console.error('Failed to sync title bar theme', err)
-        }
-      },
-      browser: {
-        clearCache: async () => {
-          console.log('clear cache from all sessions')
-          
-          // Clear default session
-          await session.defaultSession.clearStorageData()
-          
-          // Clear all custom sessions from active windows
-          const windows = BrowserWindow.getAllWindows()
-          for (const window of windows) {
-            if (window.webContents && window.webContents.session) {
-              await window.webContents.session.clearStorageData()
-            }
-          }
-          
-          console.log("cleared all sessions")
-        }
-      }
+    updateSplashWindow({
+      state: 'loading',
+      message: 'Starting Pinokio…',
+      icon: getSplashIcon()
     })
+    try {
+      try {
+        const portInUse = await pinokiod.running(pinokiod.port)
+        if (portInUse) {
+          showStartupError({
+            message: 'Pinokio is already running',
+            detail: `Pinokio detected another instance listening on port ${pinokiod.port}. Please close the other instance before launching a new one.`
+          })
+          return
+        }
+      } catch (checkError) {
+        console.warn('Failed to verify pinokio port availability', checkError)
+      }
+      await pinokiod.start({
+        onquit: () => {
+          app.quit()
+        },
+        onrestart: () => {
+          app.relaunch();
+          app.exit()
+        },
+        onrefresh: (payload) => {
+          try {
+            updateThemeColors(payload || { theme: pinokiod.theme, colors: pinokiod.colors })
+          } catch (err) {
+            console.error('Failed to sync title bar theme', err)
+          }
+        },
+        browser: {
+          clearCache: async () => {
+            console.log('clear cache from all sessions')
+            
+            // Clear default session
+            await session.defaultSession.clearStorageData()
+            
+            // Clear all custom sessions from active windows
+            const windows = BrowserWindow.getAllWindows()
+            for (const window of windows) {
+              if (window.webContents && window.webContents.session) {
+                await window.webContents.session.clearStorageData()
+              }
+            }
+            
+            console.log("cleared all sessions")
+          }
+        }
+      })
+    } catch (error) {
+      console.error('Failed to start pinokiod', error)
+      showStartupError({ error })
+      return
+    }
+    closeSplashWindow()
     PORT = pinokiod.port
     app.on('web-contents-created', attach)
     app.on('activate', function () {
