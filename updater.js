@@ -86,7 +86,10 @@ class Updater {
       }
     });
 
-    autoUpdater.checkForUpdates();
+    autoUpdater.checkForUpdates().catch((err) => {
+      // The updater promise rejects on recoverable network errors; log and continue.
+      console.error('Failed to check for updates:', err)
+    });
   }
 }
 
