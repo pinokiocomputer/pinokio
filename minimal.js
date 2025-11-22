@@ -170,6 +170,21 @@ app.whenReady().then(async () => {
     showStartupError({ error })
     return
   }
+  let quitting = false
+  app.on('before-quit', (e) => {
+    if (quitting) {
+      return
+    }
+    if (pinokiod && pinokiod.kernel && typeof pinokiod.kernel.kill === 'function') {
+      quitting = true
+      e.preventDefault()
+      try {
+        pinokiod.kernel.kill()
+      } catch (err) {
+        console.warn('Failed to terminate pinokiod on quit', err)
+      }
+    }
+  })
   closeSplashWindow()
   rootUrl = `http://localhost:${pinokiod.port}`
   if (process.platform === 'darwin') app.dock.hide();
