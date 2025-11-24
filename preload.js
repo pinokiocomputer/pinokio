@@ -70,64 +70,6 @@ window.electronAPI = {
   },
 }
 
-;(function initIframeScrollPulseBridge() {
-  // Run in all frames; top sends pulses, children listen.
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return
-  }
-
-  // Watch the hosting iframe's rect; when it moves/resizes, dispatch a scroll to wake lazy logic.
-  if (window !== window.top && window.frameElement && window.frameElement.getBoundingClientRect) {
-    const el = window.frameElement
-    let last = el.getBoundingClientRect()
-    const log = (...args) => {
-      try {
-        console.log('[Pinokio Iframe Nudge]', ...args)
-      } catch (_) {}
-    }
-    log('watching frameElement', {
-      tag: el.tagName,
-      initial: {
-        top: last.top, left: last.left, width: last.width, height: last.height
-      }
-    })
-    // Small loop to detect movement/resize of the hosting iframe.
-    const tick = () => {
-      try {
-        const rect = el.getBoundingClientRect()
-        if (rect &&
-            (rect.top !== last.top ||
-             rect.left !== last.left ||
-             rect.width !== last.width ||
-             rect.height !== last.height)) {
-          log('rect changed', {
-            from: { top: last.top, left: last.left, width: last.width, height: last.height },
-            to: { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
-          })
-          last = rect
-          window.dispatchEvent(new Event('scroll'))
-          document.dispatchEvent(new Event('scroll'))
-        }
-      } catch (_) {
-        // ignore
-      }
-      setTimeout(tick, 200)
-    }
-    tick()
-
-    try {
-      const ro = new ResizeObserver(() => {
-        log('resize observed')
-        window.dispatchEvent(new Event('scroll'))
-        document.dispatchEvent(new Event('scroll'))
-      })
-      ro.observe(el)
-    } catch (_) {
-      // ignore
-    }
-  }
-})()
-
 ;(function initInspector() {
   if (typeof document === 'undefined') {
     return
