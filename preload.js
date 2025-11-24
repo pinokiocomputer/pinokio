@@ -141,20 +141,30 @@ window.electronAPI = {
     const bootstrap = () => {
       document.querySelectorAll('iframe').forEach(watchIframe)
     }
-    bootstrap()
-
-    const mo = new MutationObserver((muts) => {
-      for (const m of muts) {
-        m.addedNodes.forEach((node) => {
-          if (node.tagName === 'IFRAME') {
-            watchIframe(node)
-          } else if (node.querySelectorAll) {
-            node.querySelectorAll('iframe').forEach(watchIframe)
-          }
-        })
+    const startObserving = () => {
+      bootstrap()
+      const root = document.documentElement
+      if (!root) {
+        return
       }
-    })
-    mo.observe(document.documentElement, { childList: true, subtree: true })
+      const mo = new MutationObserver((muts) => {
+        for (const m of muts) {
+          m.addedNodes.forEach((node) => {
+            if (node.tagName === 'IFRAME') {
+              watchIframe(node)
+            } else if (node.querySelectorAll) {
+              node.querySelectorAll('iframe').forEach(watchIframe)
+            }
+          })
+        }
+      })
+      mo.observe(root, { childList: true, subtree: true })
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startObserving, { once: true })
+    } else {
+      startObserving()
+    }
   }
 
   // Child-frame listener: on pulse, nudge lazy logic with a synthetic scroll.

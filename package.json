@@ -1,14 +1,14 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "3.334.0",
+  "version": "3.335.0",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
   "email": "cocktailpeanuts@proton.me",
   "author": "https://twitter.com/cocktailpeanut",
   "scripts": {
-    "start": "./node_modules/.bin/electron .",
+    "start": "electron .",
     "pack": "./node_modules/.bin/electron-builder --dir",
     "eject": "hdiutil info | grep '/dev/disk' | awk '{print $1}' | xargs -I {} hdiutil detach {}",
     "l": "docker run --rm -ti -v $PWD:/project -w /project -e SNAPCRAFT_BUILD_ENVIRONMENT=host -e SNAP_DESTRUCTIVE_MODE=true electronuserland/builder bash -lc 'rm -rf node_modules && npm install && npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && ./node_modules/.bin/electron-builder -l'",
@@ -144,7 +144,7 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^3.334.0"
+    "pinokiod": "^3.335.0"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
