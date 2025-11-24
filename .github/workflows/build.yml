@@ -1,9 +1,9 @@
 name: Build/release
 
-#on:
-#  push:
-#    branches:
-#      - main
+on:
+  push:
+    branches:
+      - main
 
 #on: workflow_dispatch
 
