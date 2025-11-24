@@ -70,6 +70,109 @@ window.electronAPI = {
   },
 }
 
+;(function initIframeScrollPulseBridge() {
+  // Run in all frames; top sends pulses, children listen.
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return
+  }
+
+  const PULSE_TYPE = 'pinokio:scroll-pulse'
+
+  // Top-frame sender: watch descendant iframes and send pulses when their rect changes while visible.
+  if (window === window.top) {
+    const observed = new WeakMap()
+    const throttles = new WeakMap()
+
+    const sendPulse = (frame) => {
+      try {
+        frame.contentWindow?.postMessage({ type: PULSE_TYPE, ts: Date.now() }, '*')
+      } catch (_) {
+        // ignore cross-origin or detached frames
+      }
+    }
+
+    const watchIframe = (iframe) => {
+      if (!iframe || observed.has(iframe)) {
+        return
+      }
+      const entry = {
+        lastRect: iframe.getBoundingClientRect(),
+        visible: true,
+      }
+      observed.set(iframe, entry)
+
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          entry.visible = e.isIntersecting
+        }
+      }, { threshold: [0, 0.01] })
+      io.observe(iframe)
+
+      const handler = () => {
+        if (!entry.visible) {
+          return
+        }
+        if (throttles.get(iframe)) {
+          return
+        }
+        throttles.set(iframe, true)
+        requestAnimationFrame(() => {
+          throttles.delete(iframe)
+          if (!document.contains(iframe)) {
+            return
+          }
+          const rect = iframe.getBoundingClientRect()
+          const last = entry.lastRect
+          if (!last ||
+              rect.top !== last.top ||
+              rect.left !== last.left ||
+              rect.width !== last.width ||
+              rect.height !== last.height) {
+            entry.lastRect = rect
+            sendPulse(iframe)
+          }
+        })
+      }
+
+      window.addEventListener('scroll', handler, { passive: true })
+      window.addEventListener('resize', handler)
+    }
+
+    const bootstrap = () => {
+      document.querySelectorAll('iframe').forEach(watchIframe)
+    }
+    bootstrap()
+
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts) {
+        m.addedNodes.forEach((node) => {
+          if (node.tagName === 'IFRAME') {
+            watchIframe(node)
+          } else if (node.querySelectorAll) {
+            node.querySelectorAll('iframe').forEach(watchIframe)
+          }
+        })
+      }
+    })
+    mo.observe(document.documentElement, { childList: true, subtree: true })
+  }
+
+  // Child-frame listener: on pulse, nudge lazy logic with a synthetic scroll.
+  window.addEventListener('message', (event) => {
+    if (!event || !event.data || event.source === window) {
+      return
+    }
+    if (event.data.type === PULSE_TYPE) {
+      try {
+        window.dispatchEvent(new Event('scroll'))
+        document.dispatchEvent(new Event('scroll'))
+      } catch (_) {
+        // ignore
+      }
+    }
+  })
+})()
+
 ;(function initInspector() {
   if (typeof document === 'undefined') {
     return
