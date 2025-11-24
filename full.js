@@ -1912,7 +1912,7 @@ const createWindow = (port) => {
     height: mainWindowState.height,
     minWidth: 190,
     webPreferences: {
-      session: session.defaultSession,
+      session: session.fromPartition('temp-window-' + Date.now()),
       webSecurity: false,
       nativeWindowOpen: true,
       contextIsolation: false,
@@ -1977,7 +1977,7 @@ const loadNewWindow = (url, port) => {
     height: winState.height,
     minWidth: 190,
     webPreferences: {
-      session: session.defaultSession,
+      session: session.fromPartition('temp-window-' + Date.now()),
       webSecurity: false,
       nativeWindowOpen: true,
       contextIsolation: false,
