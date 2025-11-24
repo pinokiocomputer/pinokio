@@ -2052,6 +2052,7 @@ if (!gotTheLock) {
 
   // Create mainWindow, load the rest of the app, etc...
   // Enable desktop capture for getDisplayMedia support (must be before app ready)
+  app.commandLine.appendSwitch('disable-features', 'LazyImageLoading')
   app.commandLine.appendSwitch('enable-experimental-web-platform-features');
   app.commandLine.appendSwitch('enable-features', 'GetDisplayMediaSet,GetDisplayMediaSetAutoSelectAllScreens');
   
