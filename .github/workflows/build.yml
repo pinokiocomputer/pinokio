@@ -127,13 +127,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SIGNED_EXE=$(echo signed-windows/*.exe)
+          shopt -s nullglob
+
+          files=(signed-windows/*.exe)
+          if [[ ${#files[@]} -ne 1 ]]; then
+            echo "Expected exactly one signed exe, found ${#files[@]}" >&2
+            exit 1
+          fi
+
+          SIGNED_EXE="${files[0]}"
           EXE_BASENAME=$(basename "$SIGNED_EXE")
           VERSION=$(node -p "require('./package.json').version")
           OUT_DIR=dist-win32
           mkdir -p "$OUT_DIR"
 
-          APP_BUILDER=$(node -p "require('app-builder-bin').path")
+          # Use app-builder bundled with electron-builder to regenerate blockmap for the signed binary
+          APP_BUILDER=$(node -p "require('app-builder-bin').appBuilderPath")
           "$APP_BUILDER" blockmap --input "$SIGNED_EXE" --output "$OUT_DIR/${EXE_BASENAME}.blockmap"
 
           EXE="$SIGNED_EXE" BLOCKMAP="$OUT_DIR/${EXE_BASENAME}.blockmap" VERSION="$VERSION" OUT_DIR="$OUT_DIR" node - <<'EOF'
