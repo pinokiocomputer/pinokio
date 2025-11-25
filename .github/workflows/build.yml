@@ -215,7 +215,7 @@ jobs:
           #  --notes "Pinokio version $PACKAGE_VERSION."
 
   mac:
-    if: false
+#    if: false
     needs: "create-release"
     runs-on: macos-latest
     permissions:
@@ -264,7 +264,7 @@ jobs:
         run: cat dist-darwin/**/notarization-error.log || echo "No notarization-error.log found"
 
   linux:
-    if: false
+#    if: false
     needs: "create-release"
     runs-on: ubuntu-latest
     permissions:
