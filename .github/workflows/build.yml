@@ -123,6 +123,48 @@ jobs:
           parameters: |
             version: ${{ toJSON(github.ref_name) }}
 
+      - name: Rebuild blockmap and latest.yml from signed installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          SIGNED_EXE=$(echo signed-windows/*.exe)
+          EXE_BASENAME=$(basename "$SIGNED_EXE")
+          VERSION=$(node -p "require('./package.json').version")
+          OUT_DIR=dist-win32
+          mkdir -p "$OUT_DIR"
+
+          APP_BUILDER=$(node -p "require('app-builder-bin').path")
+          "$APP_BUILDER" blockmap --input "$SIGNED_EXE" --output "$OUT_DIR/${EXE_BASENAME}.blockmap"
+
+          EXE="$SIGNED_EXE" BLOCKMAP="$OUT_DIR/${EXE_BASENAME}.blockmap" VERSION="$VERSION" OUT_DIR="$OUT_DIR" node - <<'EOF'
+          const fs = require('fs');
+          const crypto = require('crypto');
+          const path = require('path');
+
+          const exe = process.env.EXE;
+          const blockmap = process.env.BLOCKMAP;
+          const version = process.env.VERSION;
+          const outDir = process.env.OUT_DIR;
+
+          const exeStats = fs.statSync(exe);
+          const blockmapStats = fs.statSync(blockmap);
+          const sha512 = crypto.createHash('sha512').update(fs.readFileSync(exe)).digest('base64');
+
+          const lines = [
+            `version: ${version}`,
+            `files:`,
+            `  - url: ${path.basename(exe)}`,
+            `    sha512: ${sha512}`,
+            `    size: ${exeStats.size}`,
+            `    blockMapSize: ${blockmapStats.size}`,
+            `path: ${path.basename(exe)}`,
+            `sha512: ${sha512}`,
+            `releaseDate: "${new Date().toISOString()}"`
+          ];
+
+          fs.writeFileSync(path.join(outDir, 'latest.yml'), lines.join('\n'));
+          EOF
+
 #      # Replace the unsigned exe with the signed exe
 #      - name: Replace with signed exe
 #        run: |
@@ -164,6 +206,7 @@ jobs:
           #  --notes "Pinokio version $PACKAGE_VERSION."
 
   mac:
+    if: false
     needs: "create-release"
     runs-on: macos-latest
     permissions:
@@ -212,7 +255,7 @@ jobs:
         run: cat dist-darwin/**/notarization-error.log || echo "No notarization-error.log found"
 
   linux:
-#    if: false
+    if: false
     needs: "create-release"
     runs-on: ubuntu-latest
     permissions:
