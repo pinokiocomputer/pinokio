@@ -4404,6 +4404,19 @@ class Server {
       exists: (target) => this.exists(target),
     });
 
+    let counter = 0;
+    this.app.get('/counter', (req, res) => {
+      res.json({ counter });
+    });
+    this.app.post('/counter/increment', (req, res) => {
+      counter++;
+      res.json({ counter });
+    });
+    this.app.post('/counter/decrement', (req, res) => {
+      counter--;
+      res.json({ counter });
+    });
+
     this.app.get('/pinokio/notification-sounds', ex(async (req, res) => {
       const soundRoot = path.resolve(__dirname, 'public', 'sound');
       let entries = [];

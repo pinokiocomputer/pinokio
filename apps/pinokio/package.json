@@ -1,0 +1,163 @@
+{
+  "name": "Pinokio",
+  "private": true,
+  "version": "5.1.0",
+  "homepage": "https://pinokio.co",
+  "description": "pinokio",
+  "main": "main.js",
+  "email": "cocktailpeanuts@proton.me",
+  "author": "https://twitter.com/cocktailpeanut",
+  "scripts": {
+    "start": "electron .",
+    "pack": "./node_modules/.bin/electron-builder --dir",
+    "eject": "hdiutil info | grep '/dev/disk' | awk '{print $1}' | xargs -I {} hdiutil detach {}",
+    "l": "docker run --rm -ti -v $PWD:/project -w /project -e SNAPCRAFT_BUILD_ENVIRONMENT=host -e SNAP_DESTRUCTIVE_MODE=true electronuserland/builder bash -lc 'rm -rf node_modules && npm install && npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && ./node_modules/.bin/electron-builder -l'",
+    "mw": "rm -rf node_modules && npm install && npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && ./node_modules/.bin/electron-builder -mw && npm run zip",
+    "build2": "npm run l && npm run mw",
+    "dist": "npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && export SNAPCRAFT_BUILD_ENVIRONMENT=host && export SNAP_DESTRUCTIVE_MODE='true' && ./node_modules/.bin/electron-builder -l && npm run zip",
+    "dist2": "npm run monkeypatch && export USE_SYSTEM_FPM=true && ./node_modules/.bin/electron-builder install-app-deps && export SNAPCRAFT_BUILD_ENVIRONMENT=host && export SNAP_DESTRUCTIVE_MODE='true' && ./node_modules/.bin/electron-builder -mwl && npm run zip",
+    "zip": "node script/zip",
+    "monkeypatch": "cp temp/yarn.js ../../node_modules/app-builder-lib/out/util/yarn.js && cp temp/rebuild.js ../../node_modules/@electron/rebuild/lib/src/rebuild.js && cp temp/pinokiod_server_index.js ../../node_modules/pinokiod/server/index.js",
+    "postinstall2": "npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps",
+    "fix": "brew install fpm",
+    "dev": "concurrently \"vite\" \"wait-on tcp:5173 && cross-env PINOKIO_DEV=true electron .\""
+  },
+  "build": {
+    "appId": "computer.pinokio",
+    "afterPack": "chmod.js",
+    "afterSign": "electron-builder-notarize",
+    "directories": {
+      "output": "dist-${platform}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "pinokiocomputer",
+        "repo": "pinokio"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/go-get-folder-size/**/*",
+      "node_modules/7zip-bin/**/*",
+      "node_modules/sweetalert2/**/*",
+      "node_modules/@homebridge/**/*",
+      "node_modules/pinokiod/server/public/**/*",
+      "node_modules/toasted-notifier/vendor/mac.noindex/**/*"
+    ],
+    "nsis": {
+      "include": "build/installer.nsh"
+    },
+    "extraResources": [
+      "./script/**",
+      {
+        "from": "assets/icon_small.png",
+        "to": "assets/icon_small.png"
+      }
+    ],
+    "protocols": [
+      {
+        "name": "pinokio",
+        "schemes": [
+          "pinokio"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "utility",
+      "target": [
+        {
+          "target": "default",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true
+    },
+    "dmg": {
+      "backgroundColor": "#ffffff",
+      "icon": null,
+      "window": {
+        "width": 520,
+        "height": 320
+      },
+      "iconSize": 120,
+      "contents": [
+        {
+          "type": "file",
+          "x": 160,
+          "y": 170
+        },
+        {
+          "type": "link",
+          "name": "Applications",
+          "path": "/Applications",
+          "x": 360,
+          "y": 170
+        }
+      ]
+    },
+    "linux": {
+      "maintainer": "Cocktail Peanut <cocktailpeanuts@proton.me>",
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "artifactName": "Pinokio.${ext}",
+      "signtoolOptions": {
+        "sign": "./build/sign.js"
+      },
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  },
+  "license": "MIT",
+  "dependencies": {
+    "electron-progressbar": "^2.2.1",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.6.2",
+    "electron-window-state": "^5.0.3",
+    "pinokiod": "^5.1.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "3.2.10",
+    "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "39.2.3",
+    "electron-builder": "26.2.0",
+    "electron-builder-notarize": "^1.5.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vite": "^7.2.4",
+    "wait-on": "^9.0.3"
+  }
+}
