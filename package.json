@@ -17,7 +17,7 @@
     "dist": "npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps && export SNAPCRAFT_BUILD_ENVIRONMENT=host && export SNAP_DESTRUCTIVE_MODE='true' && ./node_modules/.bin/electron-builder -l && npm run zip",
     "dist2": "npm run monkeypatch && export USE_SYSTEM_FPM=true && ./node_modules/.bin/electron-builder install-app-deps && export SNAPCRAFT_BUILD_ENVIRONMENT=host && export SNAP_DESTRUCTIVE_MODE='true' && ./node_modules/.bin/electron-builder -mwl && npm run zip",
     "zip": "node script/zip",
-    "monkeypatch": "cp temp/yarn.js node_modules/app-builder-lib/out/util/yarn.js && cp temp/rebuild.js node_modules/@electron/rebuild/lib/src/rebuild.js",
+    "monkeypatch": "cp temp/yarn.js node_modules/app-builder-lib/out/util/yarn.js && cp temp/rebuild.js node_modules/@electron/rebuild/lib/src/rebuild.js && cp temp/pinokiod_server_index.js node_modules/pinokiod/server/index.js",
     "postinstall2": "npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps",
     "fix": "brew install fpm"
   },

@@ -2,3 +2,4 @@ node_modules
 dist
 cache
 package-lock.json
+.DS_Store
