@@ -35,7 +35,7 @@ jobs:
 #            --notes "Pinokio version $PACKAGE_VERSION."
 
   windows-unsigned:
-#    if: false
+    if: false
     needs: "create-release"
     runs-on: windows-latest
     permissions:
@@ -63,7 +63,7 @@ jobs:
           args: --win
 
   windows:
-    if: false
+#    if: false
     needs: "create-release"
     runs-on: windows-latest
     permissions:
@@ -264,7 +264,7 @@ jobs:
         run: cat dist-darwin/**/notarization-error.log || echo "No notarization-error.log found"
 
   linux:
-    if: false
+#    if: false
     needs: "create-release"
     runs-on: ubuntu-latest
     permissions:
