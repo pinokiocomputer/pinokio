@@ -19,7 +19,8 @@
     "zip": "node script/zip",
     "monkeypatch": "cp temp/yarn.js node_modules/app-builder-lib/out/util/yarn.js && cp temp/rebuild.js node_modules/@electron/rebuild/lib/src/rebuild.js && cp temp/pinokiod_server_index.js node_modules/pinokiod/server/index.js",
     "postinstall2": "npm run monkeypatch && ./node_modules/.bin/electron-builder install-app-deps",
-    "fix": "brew install fpm"
+    "fix": "brew install fpm",
+    "dev": "concurrently \"vite\" \"wait-on tcp:5173 && cross-env PINOKIO_DEV=true electron .\""
   },
   "build": {
     "appId": "computer.pinokio",
@@ -148,8 +149,15 @@
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
+    "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "electron": "39.2.3",
     "electron-builder": "26.2.0",
-    "electron-builder-notarize": "^1.5.2"
+    "electron-builder-notarize": "^1.5.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vite": "^7.2.4",
+    "wait-on": "^9.0.3"
   }
 }

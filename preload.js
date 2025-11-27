@@ -68,6 +68,7 @@ window.electronAPI = {
   captureScreenshot: (screenshotRequest) => {
     return ipcRenderer.invoke('pinokio:capture-screenshot-debug', { screenshotRequest })
   },
+  startPinokio: () => ipcRenderer.invoke('pinokio:start'),
 }
 
 ;(function initInspector() {

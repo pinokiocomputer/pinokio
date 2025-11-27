@@ -1,0 +1,114 @@
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #ffffff;
+  color: #111827;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.card {
+  width: min(360px, 90vw);
+  padding: 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
+}
+.logo {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+}
+.title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.subtitle {
+  margin: 0;
+  opacity: 0.85;
+  line-height: 1.4;
+  font-size: 13px;
+}
+.hint {
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 16px 0 0;
+  word-break: break-word;
+}
+.loader {
+  width: 60px;
+  height: 2px;
+  margin: 24px auto;
+  background: rgba(17, 24, 39, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+.loader::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 30%;
+  height: 100%;
+  background: #111827;
+  animation: slide 1.2s ease-in-out infinite;
+}
+.detail {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  font-size: 12px;
+  text-align: left;
+  white-space: pre-wrap;
+  margin-top: 16px;
+  max-height: 160px;
+  overflow-y: auto;
+  background: rgba(249, 250, 251, 0.8);
+  width: 100%;
+}
+.btn {
+  background: #111827;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.error {
+  color: #b91c1c;
+  font-size: 13px;
+  margin-top: 10px;
+}
+body.error .subtitle {
+  color: #b91c1c;
+}
+body.error .loader {
+  display: none;
+}
+@keyframes slide {
+  0% {
+    left: -30%;
+  }
+  50% {
+    left: 100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
