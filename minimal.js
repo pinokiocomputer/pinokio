@@ -224,17 +224,21 @@ app.whenReady().then(async () => {
         console.warn('Failed to set AppUserModelID', err)
       }
 
+      let notified = false
       if (Notification && typeof Notification.isSupported === 'function' && Notification.isSupported()) {
         try {
-          new Notification({ title: 'Pinokio', body: 'Running in background' }).show()
-          return
+          new Notification({
+            title: 'Pinokio',
+            body: 'Running in background',
+            icon: iconPath
+          }).show()
+          notified = true
         } catch (err) {
-          console.warn('Failed to show background notification', err)
+          console.warn('Failed to show background notification (toast)', err)
         }
       }
-
-      if (typeof tray.displayBalloon === 'function') {
-        tray.displayBalloon({ title: 'Pinokio', content: 'Running in background' })
+      if (!notified && typeof tray.displayBalloon === 'function') {
+        tray.displayBalloon({ title: 'Pinokio', content: 'Running in background', icon: iconPath })
       }
       return
     }
