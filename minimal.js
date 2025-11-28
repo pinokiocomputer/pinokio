@@ -214,9 +214,31 @@ app.whenReady().then(async () => {
       } catch (err) {
         console.warn('Failed to set tray highlight/title', err)
       }
-    } else if (process.platform === 'win32' && typeof tray.displayBalloon === 'function') {
-      tray.displayBalloon({ title: 'Pinokio', content: 'Running in background' })
+      return
     }
+
+    if (process.platform === 'win32') {
+      try {
+        app.setAppUserModelId('Pinokio')
+      } catch (err) {
+        console.warn('Failed to set AppUserModelID', err)
+      }
+
+      if (Notification && typeof Notification.isSupported === 'function' && Notification.isSupported()) {
+        try {
+          new Notification({ title: 'Pinokio', body: 'Running in background' }).show()
+          return
+        } catch (err) {
+          console.warn('Failed to show background notification', err)
+        }
+      }
+
+      if (typeof tray.displayBalloon === 'function') {
+        tray.displayBalloon({ title: 'Pinokio', content: 'Running in background' })
+      }
+      return
+    }
+
     if (Notification && typeof Notification.isSupported === 'function' && Notification.isSupported()) {
       try {
         new Notification({ title: 'Pinokio', body: 'Running in background' }).show()
