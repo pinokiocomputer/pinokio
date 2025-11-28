@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "5.1.5",
+  "version": "5.1.10",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -31,7 +31,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "peanutcocktail",
+        "owner": "pinokiocomputer",
         "repo": "pinokio"
       }
     ],
@@ -144,7 +144,7 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^5.1.5"
+    "pinokiod": "^5.1.10"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
