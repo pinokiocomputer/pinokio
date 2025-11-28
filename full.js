@@ -1923,6 +1923,10 @@ const createWindow = (port) => {
     },
   })
 
+  mainWindow.on('closed', () => {
+    mainWindow = null
+  })
+
   // Debug media device availability
   mainWindow.webContents.once('did-finish-load', () => {
     console.log('[MEDIA DEBUG] Main window loaded, checking media devices availability...')
@@ -2034,7 +2038,9 @@ if (!gotTheLock) {
 
   app.on('second-instance', (event, argv) => {
 
-    if (mainWindow) {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      createWindow(PORT)
+    } else {
       if (mainWindow.isMinimized()) mainWindow.restore()
       mainWindow.focus()
     }

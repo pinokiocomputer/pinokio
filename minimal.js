@@ -1,4 +1,4 @@
-const { app, Tray, Menu, shell, nativeImage, BrowserWindow, session } = require('electron');
+const { app, Tray, Menu, shell, nativeImage, BrowserWindow, session, Notification } = require('electron');
 const path = require('path')
 const os = require('os')
 const fs = require('fs')
@@ -188,12 +188,14 @@ app.whenReady().then(async () => {
   closeSplashWindow()
   rootUrl = `http://localhost:${pinokiod.port}`
   if (process.platform === 'darwin') app.dock.hide();
-  let icon = nativeImage.createFromPath(path.resolve(process.resourcesPath, "assets/icon_small.png"))
+  const assetsRoot = app.isPackaged ? process.resourcesPath : __dirname
+  const iconPath = path.resolve(assetsRoot, "assets/icon_small.png")
+  let icon = nativeImage.createFromPath(iconPath)
   icon = icon.resize({
     height: 24,
     width: 24 
   });
-  console.log('isEmpty:', icon.isEmpty()); // if true, image failed to load
+  console.log('Tray icon path:', iconPath, 'isEmpty:', icon.isEmpty()); // if true, image failed to load
   tray = new Tray(icon)
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Open in Browser', click: () => shell.openExternal(rootUrl) },
@@ -202,6 +204,28 @@ app.whenReady().then(async () => {
   ]);
   tray.setToolTip('Pinokio');
   tray.setContextMenu(contextMenu);
+  const announceTray = () => {
+    if (process.platform === 'darwin') {
+      try {
+        tray.setHighlightMode('always')
+        tray.setTitle('Pinokio running')
+        setTimeout(() => tray.setHighlightMode('selection'), 4000)
+        setTimeout(() => tray.popUpContextMenu(contextMenu), 150)
+      } catch (err) {
+        console.warn('Failed to set tray highlight/title', err)
+      }
+    } else if (process.platform === 'win32' && typeof tray.displayBalloon === 'function') {
+      tray.displayBalloon({ title: 'Pinokio', content: 'Running in background' })
+    }
+    if (Notification && typeof Notification.isSupported === 'function' && Notification.isSupported()) {
+      try {
+        new Notification({ title: 'Pinokio', body: 'Running in background' }).show()
+      } catch (err) {
+        console.warn('Failed to show background notification', err)
+      }
+    }
+  }
+  announceTray()
   tray.on('click', () => {
     tray.popUpContextMenu(contextMenu);
   });
