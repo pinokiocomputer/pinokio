@@ -204,52 +204,44 @@ app.whenReady().then(async () => {
   ]);
   tray.setToolTip('Pinokio');
   tray.setContextMenu(contextMenu);
+  const showNotification = (options = {}) => {
+    try {
+      new Notification({
+        title: 'Pinokio',
+        body: 'Running in background',
+        ...options
+      }).show()
+    } catch (err) {
+      console.warn('Failed to show background notification', err)
+    }
+  }
   const announceTray = () => {
-    if (process.platform === 'darwin') {
-      try {
-        tray.setHighlightMode('always')
-        tray.setTitle('Pinokio running')
-        setTimeout(() => tray.setHighlightMode('selection'), 4000)
-        setTimeout(() => tray.popUpContextMenu(contextMenu), 150)
-      } catch (err) {
-        console.warn('Failed to set tray highlight/title', err)
-      }
-      return
-    }
-
-    if (process.platform === 'win32') {
-      try {
-        app.setAppUserModelId('Pinokio')
-      } catch (err) {
-        console.warn('Failed to set AppUserModelID', err)
-      }
-
-      let notified = false
-      if (Notification && typeof Notification.isSupported === 'function' && Notification.isSupported()) {
+    const platformHandlers = {
+      darwin: () => {
         try {
-          new Notification({
-            title: 'Pinokio',
-            body: 'Running in background',
-            icon: iconPath
-          }).show()
-          notified = true
+          tray.setHighlightMode('always')
+          tray.setTitle('Pinokio running')
+          setTimeout(() => tray.setHighlightMode('selection'), 4000)
+          setTimeout(() => tray.popUpContextMenu(contextMenu), 150)
         } catch (err) {
-          console.warn('Failed to show background notification (toast)', err)
+          console.warn('Failed to signal tray/notification on macOS', err)
         }
+        showNotification()
+      },
+      win32: () => {
+        try {
+          app.setAppUserModelId('Pinokio')
+        } catch (err) {
+          console.warn('Failed to set AppUserModelID', err)
+        }
+        showNotification({ icon: iconPath })
+      },
+      default: () => {
+        showNotification()
       }
-      if (!notified && typeof tray.displayBalloon === 'function') {
-        tray.displayBalloon({ title: 'Pinokio', content: 'Running in background', icon: iconPath })
-      }
-      return
     }
-
-    if (Notification && typeof Notification.isSupported === 'function' && Notification.isSupported()) {
-      try {
-        new Notification({ title: 'Pinokio', body: 'Running in background' }).show()
-      } catch (err) {
-        console.warn('Failed to show background notification', err)
-      }
-    }
+    const handler = platformHandlers[process.platform] || platformHandlers.default
+    handler()
   }
   announceTray()
   tray.on('click', () => {
