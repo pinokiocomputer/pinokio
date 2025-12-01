@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "5.1.10",
+  "version": "5.1.11",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -31,7 +31,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "pinokiocomputer",
+        "owner": "peanutcocktail",
         "repo": "pinokio"
       }
     ],

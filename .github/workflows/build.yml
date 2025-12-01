@@ -63,7 +63,7 @@ jobs:
           args: --win
 
   windows:
-#    if: false
+    if: false
     needs: "create-release"
     runs-on: windows-latest
     permissions:
@@ -215,7 +215,7 @@ jobs:
           #  --notes "Pinokio version $PACKAGE_VERSION."
 
   mac:
-#    if: false
+    if: false
     needs: "create-release"
     runs-on: macos-latest
     permissions:

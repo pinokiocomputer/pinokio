@@ -23,7 +23,7 @@ const setWindowTitleBarOverlay = (win, overlay) => {
   try {
     win.setTitleBarOverlay(overlay)
   } catch (e) {
-    console.log("ERROR", e)
+//    console.log("ERROR", e)
   }
 }
 const applyTitleBarOverlayToAllWindows = () => {
