@@ -5,6 +5,7 @@ const pinokiod = new Pinokiod(config)
 
 if (process.platform === 'linux') {
   app.commandLine.appendSwitch('ozone-platform', 'x11')
+  app.commandLine.appendSwitch('disable-gpu')
 }
 
 let mode = pinokiod.kernel.store.get("mode") || "full"
