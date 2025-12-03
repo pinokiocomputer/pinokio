@@ -5,7 +5,6 @@ const pinokiod = new Pinokiod(config)
 
 if (process.platform === 'linux') {
   app.disableHardwareAcceleration()
-  app.commandLine.appendSwitch('ozone-platform', 'x11')
 }
 
 let mode = pinokiod.kernel.store.get("mode") || "full"
