@@ -8,7 +8,7 @@ module.exports = async (context) => {
     return
   }
 
-  const exeName = packager.appInfo.productFilename
+  const exeName = packager.executableName || packager.appInfo.productFilename
   const exePath = path.join(appOutDir, exeName)
   const wrappedExePath = path.join(appOutDir, `${exeName}-bin`)
 
@@ -24,9 +24,8 @@ module.exports = async (context) => {
   const wrapperScript = `#!/usr/bin/env sh
 export ELECTRON_OZONE_PLATFORM_HINT=x11
 export ELECTRON_DISABLE_GPU=1
-exec "$(dirname "$0")/${exeName}-bin" "$@"
+exec "$(dirname "$0")/${exeName}-bin" --ozone-platform=x11 --disable-gpu --disable-gpu-sandbox "$@"
 `
 
   fs.writeFileSync(exePath, wrapperScript, { mode: originalStat.mode || 0o755 })
 }
-
