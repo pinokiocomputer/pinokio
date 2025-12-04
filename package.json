@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "5.1.14",
+  "version": "5.1.15",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -23,10 +23,7 @@
   },
   "build": {
     "appId": "computer.pinokio",
-    "afterPack": [
-      "chmod.js",
-      "wrap-linux-launcher.js"
-    ],
+    "afterPack": "after-pack.js",
     "afterSign": "electron-builder-notarize",
     "directories": {
       "output": "dist-${platform}"
