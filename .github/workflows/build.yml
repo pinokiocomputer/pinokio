@@ -37,7 +37,7 @@ jobs:
   windows-unsigned:
 #    if: false
     needs: "create-release"
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions:
       contents: write
     steps:
@@ -65,7 +65,7 @@ jobs:
   windows:
     if: false
     needs: "create-release"
-    runs-on: windows-latest
+    runs-on: windows-2022
     permissions:
       contents: write
     steps:
