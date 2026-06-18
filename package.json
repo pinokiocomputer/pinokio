@@ -1,7 +1,7 @@
 {
   "name": "Pinokio",
   "private": true,
-  "version": "7.3.5",
+  "version": "7.3.6",
   "homepage": "https://pinokio.co",
   "description": "pinokio",
   "main": "main.js",
@@ -43,9 +43,13 @@
       "node_modules/7zip-bin/**/*",
       "node_modules/sweetalert2/**/*",
       "node_modules/@homebridge/**/*",
+      "node_modules/koffi/**/*",
+      "node_modules/@koromix/koffi-*/**/*",
       "node_modules/pinokiod/server/public/**/*",
       "node_modules/pinokiod/server/scripts/**/*",
       "node_modules/pinokiod/system/**/*",
+      "node_modules/pinokiod/node_modules/koffi/**/*",
+      "node_modules/pinokiod/node_modules/@koromix/koffi-*/**/*",
       "node_modules/toasted-notifier/vendor/mac.noindex/**/*"
     ],
     "nsis": {
@@ -155,7 +159,7 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "electron-window-state": "^5.0.3",
-    "pinokiod": "^7.3.5"
+    "pinokiod": "^7.3.6"
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",

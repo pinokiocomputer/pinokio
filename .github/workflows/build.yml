@@ -324,7 +324,7 @@ jobs:
           fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
           EOF
 
-      - name: Install ARM64 parcel watcher native
+      - name: Install ARM64 native packages
         if: matrix.arch == 'arm64'
         shell: bash
         run: |
@@ -333,6 +333,11 @@ jobs:
           npm_config_libc=glibc \
           npm_config_force=true \
           npm install --no-save @parcel/watcher-linux-arm64-glibc@2.5.1
+          npm_config_os=linux \
+          npm_config_cpu=arm64 \
+          npm_config_libc=glibc \
+          npm_config_force=true \
+          npm install --no-save @koromix/koffi-linux-arm64@3.0.2
 
       - name: Build/release Linux app
         shell: bash
