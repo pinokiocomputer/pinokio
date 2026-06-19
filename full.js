@@ -238,6 +238,7 @@ const PINOKIO_NAVIGATION_HOSTS = new Set([
   'pinokio.co',
   'pinokio.computer'
 ])
+const PINOKIO_CO_HOST_PATTERN = /(^|\.)pinokio\.co$/
 const isPinokioNavigationHost = (value) => {
   const hostname = String(value || '').trim().toLowerCase()
   if (!hostname) {
@@ -280,6 +281,18 @@ const isPinokioNavigationUrl = (value, base) => {
     return false
   }
   return isPinokioWindowUrl(target.href, root_url) || isPinokioNavigationHost(target.hostname)
+}
+const isPinokioCommunityHandoffUrl = (value, base) => {
+  const target = safeParseUrl(value, base || (root_url || undefined))
+  if (!target || target.protocol !== 'https:') {
+    return false
+  }
+  const hostname = normalizeRequestHostname(target.hostname)
+  if (!PINOKIO_CO_HOST_PATTERN.test(hostname)) {
+    return false
+  }
+  const origin = target.searchParams.get('origin')
+  return isPinokiodServerRequestUrl(origin, root_url)
 }
 const normalizeRequestHostname = (value) => String(value || '').trim().toLowerCase().replace(/^\[|\]$/g, '')
 const isPinokiodRouterHost = (hostname) => hostname === 'pinokio.localhost'
@@ -3383,6 +3396,30 @@ const attach = (event, webContents) => {
     if (features === "browser") {
       shell.openExternal(targetUrl).catch(() => {})
       return { action: 'deny' };
+    }
+    if (isPinokioCommunityHandoffUrl(targetUrl, referrerUrl || (root_url || undefined))) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 720,
+          height: 760,
+          minWidth: 480,
+          minHeight: 520,
+          autoHideMenuBar: true,
+          title: 'Pinokio Community',
+          webPreferences: {
+            session: session.defaultSession,
+            webSecurity: true,
+            spellcheck: false,
+            nativeWindowOpen: true,
+            contextIsolation: true,
+            nodeIntegration: false,
+            nodeIntegrationInSubFrames: false,
+            enableRemoteModule: false,
+            sandbox: true
+          }
+        }
+      }
     }
     if (isLocalPinokioAppUrl(targetUrl, referrerUrl || (root_url || undefined))) {
       if (PORT) {
