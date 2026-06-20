@@ -1,5 +1,7 @@
 // put this preload for main-window to give it prompt()
 const { ipcRenderer, } = require('electron')
+const PINOKIO_INSPECTOR_ENABLED = false
+const inspectorDisabled = () => Promise.reject(new Error('Pinokio inspector is disabled.'))
 window.prompt = function(title, val){
   return ipcRenderer.sendSync('prompt', {title, val})
 }
@@ -100,9 +102,16 @@ window.electronAPI = {
   },
   sendSync: (type, msg) => ipcRenderer.sendSync(type, msg),
   requestPermissions: (payload) => ipcRenderer.invoke('pinokio:request-permissions', payload || {}),
-  startInspector: (payload) => ipcRenderer.invoke('pinokio:start-inspector', payload || {}),
-  stopInspector: () => ipcRenderer.invoke('pinokio:stop-inspector'),
+  startInspector: (payload) => PINOKIO_INSPECTOR_ENABLED
+    ? ipcRenderer.invoke('pinokio:start-inspector', payload || {})
+    : inspectorDisabled(),
+  stopInspector: () => PINOKIO_INSPECTOR_ENABLED
+    ? ipcRenderer.invoke('pinokio:stop-inspector')
+    : Promise.resolve({ ok: false, disabled: true }),
   captureScreenshot: (screenshotRequest) => {
+    if (!PINOKIO_INSPECTOR_ENABLED) {
+      return inspectorDisabled()
+    }
     return ipcRenderer.invoke('pinokio:capture-screenshot-debug', { screenshotRequest })
   }
 }
@@ -662,6 +671,9 @@ if (isEmbeddedFrame) {
 })()
 
 ;(function initInspector() {
+  if (!PINOKIO_INSPECTOR_ENABLED) {
+    return
+  }
   if (typeof document === 'undefined') {
     return
   }
