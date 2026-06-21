@@ -294,6 +294,27 @@ const isPinokioCommunityHandoffUrl = (value, base) => {
   const origin = target.searchParams.get('origin')
   return isPinokiodServerRequestUrl(origin, root_url)
 }
+const getCommunityHandoffWindowBounds = (owner) => {
+  let display
+  try {
+    display = owner && !owner.isDestroyed()
+      ? screen.getDisplayMatching(owner.getBounds())
+      : screen.getPrimaryDisplay()
+  } catch (_) {
+    display = null
+  }
+  const workArea = display && display.workArea ? display.workArea : { x: 0, y: 0, width: 1200, height: 820 }
+  const width = Math.max(720, Math.floor(workArea.width || 1200))
+  const height = Math.max(640, Math.floor(workArea.height || 820))
+  return {
+    x: Number.isFinite(workArea.x) ? workArea.x : 0,
+    y: Number.isFinite(workArea.y) ? workArea.y : 0,
+    width,
+    height,
+    minWidth: Math.min(720, width),
+    minHeight: Math.min(520, height)
+  }
+}
 const normalizeRequestHostname = (value) => String(value || '').trim().toLowerCase().replace(/^\[|\]$/g, '')
 const isPinokiodRouterHost = (hostname) => hostname === 'pinokio.localhost'
 const getRequestPort = (target) => {
@@ -3398,13 +3419,12 @@ const attach = (event, webContents) => {
       return { action: 'deny' };
     }
     if (isPinokioCommunityHandoffUrl(targetUrl, referrerUrl || (root_url || undefined))) {
+      const owner = webContents && !webContents.isDestroyed() ? webContents.getOwnerBrowserWindow() : null
+      const communityWindowBounds = getCommunityHandoffWindowBounds(owner)
       return {
         action: 'allow',
         overrideBrowserWindowOptions: {
-          width: 720,
-          height: 760,
-          minWidth: 480,
-          minHeight: 520,
+          ...communityWindowBounds,
           autoHideMenuBar: true,
           title: 'Pinokio Community',
           webPreferences: {
