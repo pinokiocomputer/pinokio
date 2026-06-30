@@ -46,6 +46,12 @@ body {
   line-height: 1.4;
   font-size: 13px;
 }
+.version {
+  margin: -2px 0 6px;
+  opacity: 0.55;
+  line-height: 1.3;
+  font-size: 12px;
+}
 .hint {
   font-size: 12px;
   opacity: 0.7;
@@ -117,6 +123,7 @@ body.error .loader {
   <img class="logo" id="logo" src="assets/icon.png" alt="Pinokio" onerror="this.onerror=null;this.src='assets/icon_small.png'">
   <div class="text">
     <p class="title" id="title">Starting Pinokio…</p>
+    <p class="version" id="version" hidden></p>
     <p class="subtitle" id="subtitle">This should only take a moment.</p>
   </div>
   <div class="loader" id="loader"></div>
@@ -130,6 +137,7 @@ body.error .loader {
   const detail = params.get('detail')
   const logPath = params.get('log')
   const icon = params.get('icon')
+  const version = params.get('version')
 
   if (icon) {
     const logo = document.getElementById('logo')
@@ -139,6 +147,11 @@ body.error .loader {
   }
 
   document.getElementById('title').textContent = message
+  if (version) {
+    const versionEl = document.getElementById('version')
+    versionEl.textContent = `Version ${version}`
+    versionEl.hidden = false
+  }
   if (state === 'error') {
     document.body.classList.add('error')
     const friendly = detail && detail.trim().length > 0

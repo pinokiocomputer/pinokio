@@ -618,6 +618,18 @@ const getSplashIcon = () => {
   splashIcon = path.join('assets', 'icon_small.png').split(path.sep).join('/')
   return splashIcon
 }
+const getSplashVersion = () => {
+  try {
+    if (app && typeof app.getVersion === 'function') {
+      const version = app.getVersion()
+      if (version) {
+        return version
+      }
+    }
+  } catch (err) {
+  }
+  return config && config.version ? config.version : ''
+}
 const ensureSplashWindow = () => {
   if (splashWindow && !splashWindow.isDestroyed()) {
     return splashWindow
@@ -657,6 +669,10 @@ const updateSplashWindow = ({ state = 'loading', message, detail, logPath, icon 
   }
   if (icon) {
     query.icon = icon
+  }
+  const version = getSplashVersion()
+  if (version) {
+    query.version = version
   }
   win.loadFile(path.join(__dirname, 'splash.html'), { query }).finally(() => {
     if (!win.isDestroyed()) {
