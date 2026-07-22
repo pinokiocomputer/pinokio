@@ -3258,7 +3258,8 @@ const attach = (event, webContents) => {
 //  })
 
 
-  webContents.session.webRequest.onHeadersReceived((details, callback) => {
+  const filter = { urls: ['*://*/*'], types: ['main_frame', 'sub_frame'] };
+  webContents.session.webRequest.onHeadersReceived(filter, (details, callback) => {
 //    console.log("details", details)
 //    console.log("responseHeaders", JSON.stringify(details.responseHeaders, null, 2))
 
