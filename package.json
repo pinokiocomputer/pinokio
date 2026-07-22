@@ -34,7 +34,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "peanutcocktail",
+        "owner": "pinokiocomputer",
         "repo": "pinokio"
       }
     ],
