@@ -6,10 +6,26 @@ const fs_extra_1 = require("fs-extra");
 const os_1 = require("os");
 const path = require("path");
 const electronVersion_1 = require("../electron/electronVersion");
+const fs = require("fs");
 const electronRebuild = require("@electron/rebuild");
-const searchModule = require("@electron/rebuild/lib/src/search-module");
-async function installOrRebuild(config, appDir, options, forceInstall = false) {
+async function getProjectRootPath(cwd) {
+    for (const lockFilename of ['yarn.lock', 'package-lock.json', 'pnpm-lock.yaml']) {
+        let traversedPath = path.resolve(cwd);
+        while (true) {
+            const lockPath = path.join(traversedPath, lockFilename);
+            if (fs.existsSync(lockPath)) {
+                return path.dirname(lockPath);
+            }
+            const parentPath = path.dirname(traversedPath);
+            if (parentPath === traversedPath) break;
+            traversedPath = parentPath;
+        }
+    }
+    return cwd;
+}
+async function installOrRebuild(config, appDirOrOptions, options, forceInstall = false) {
 console.log("install or rebuild", { config, options })
+    const appDir = typeof appDirOrOptions === 'string' ? appDirOrOptions : appDirOrOptions.appDir;
     let isDependenciesInstalled = false;
     for (const fileOrDir of ["node_modules", ".pnp.js"]) {
         if (await (0, fs_extra_1.pathExists)(path.join(appDir, fileOrDir))) {
@@ -131,7 +147,7 @@ async function rebuild(appDir, buildFromSource, options) {
         platform: options.platform,
         force: true,
         debug: builder_util_1.log.isDebugEnabled,
-        projectRootPath: await searchModule.getProjectRootPath(appDir),
+        projectRootPath: await getProjectRootPath(appDir),
     };
     if (buildFromSource) {
         effectiveOptions.prebuildTagPrefix = "totally-not-a-real-prefix-to-force-rebuild";

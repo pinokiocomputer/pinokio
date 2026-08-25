@@ -163,7 +163,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "3.2.10",
-    "electron": "39.2.3",
+    "electron": "43.4.1",
     "electron-builder": "26.2.0",
     "electron-builder-notarize": "^1.5.2"
   }
