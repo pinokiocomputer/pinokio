@@ -10,6 +10,7 @@
   "scripts": {
     "start": "electron .",
     "diagnose:user-agent": "electron script/run-user-agent-diagnostic.js",
+    "test:navigation-policy": "node script/run-navigation-policy-test.js",
     "test:user-agent": "node script/run-user-agent-test.js",
     "test:update-banner": "node script/run-update-banner-test.js",
     "postinstall": "electron-builder install-app-deps",
