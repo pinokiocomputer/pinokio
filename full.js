@@ -9,6 +9,7 @@ const {
   configurePinokioUserAgent,
   sanitizeUserAgentForRequests
 } = require('./user-agent')
+const { handleFrameNavigation } = require('./frame-navigation')
 const is_mac = process.platform.startsWith("darwin")
 const platform = os.platform()
 var mainWindow;
@@ -3236,22 +3237,18 @@ const attach = (event, webContents) => {
     }
   })
   webContents.on('will-frame-navigate', (event) => {
-    const owner = webContents.getOwnerBrowserWindow()
-    const frame = event && event.frame
-    const frameUrl = readFrameFieldSafely(frame, 'url') || (() => {
-      try {
-        return webContents.getURL()
-      } catch (_) {
-        return ''
-      }
-    })()
-    openNonPinokioHttpsInBrowser({
+    handleFrameNavigation({
       event,
-      owner,
-      url: event && event.url,
-      frame,
-      openerWebContents: webContents,
-      baseUrl: frameUrl
+      webContents,
+      rootUrl: root_url,
+      openExternalNavigation: ({ event, frame, url, baseUrl }) => openNonPinokioHttpsInBrowser({
+        event,
+        owner: webContents.getOwnerBrowserWindow(),
+        url,
+        frame,
+        openerWebContents: webContents,
+        baseUrl
+      })
     })
   })
 //  webContents.session.defaultSession.loadExtension('path/to/unpacked/extension').then(({ id }) => {
