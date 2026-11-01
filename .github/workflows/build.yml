@@ -23,16 +23,34 @@ jobs:
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
-      - name: Create an empty release
+      - name: Create or reuse draft release
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Releasing version $PACKAGE_VERSION"
-          gh release create "v$PACKAGE_VERSION" --draft \
-            --title "v$PACKAGE_VERSION" \
-            --notes-file RELEASE.md
-#            --notes "Pinokio version $PACKAGE_VERSION."
+          set -euo pipefail
+          RELEASE_TAG="v$PACKAGE_VERSION"
+          RELEASE_DRAFT=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | .draft")
+
+          case "$RELEASE_DRAFT" in
+            "")
+              gh release create "$RELEASE_TAG" --draft \
+                --title "$RELEASE_TAG" \
+                --notes-file RELEASE.md
+              ;;
+            true)
+              echo "Reusing draft release $RELEASE_TAG"
+              ;;
+            false)
+              echo "Release $RELEASE_TAG is already published; use a new version" >&2
+              exit 1
+              ;;
+            *)
+              echo "Expected at most one release with a valid draft status for $RELEASE_TAG" >&2
+              exit 1
+              ;;
+          esac
 
   windows-unsigned:
     if: false
@@ -141,9 +159,15 @@ jobs:
           OUT_DIR=dist-win32
           mkdir -p "$OUT_DIR"
 
-          # Use app-builder bundled with electron-builder to regenerate blockmap for the signed binary
-          APP_BUILDER=$(node -p "require('app-builder-bin').appBuilderPath")
-          "$APP_BUILDER" blockmap --input "$SIGNED_EXE" --output "$OUT_DIR/${EXE_BASENAME}.blockmap"
+          # Use the blockmap implementation bundled with the pinned electron-builder version
+          node - "$SIGNED_EXE" "$OUT_DIR/${EXE_BASENAME}.blockmap" <<'EOF'
+          const { buildBlockMap } = require('app-builder-lib/out/targets/blockmap/blockmap');
+
+          buildBlockMap(process.argv[2], 'gzip', process.argv[3]).catch(error => {
+            console.error(error);
+            process.exitCode = 1;
+          });
+          EOF
 
           EXE="$SIGNED_EXE" BLOCKMAP="$OUT_DIR/${EXE_BASENAME}.blockmap" VERSION="$VERSION" OUT_DIR="$OUT_DIR" node - <<'EOF'
           const fs = require('fs');
