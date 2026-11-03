@@ -53,7 +53,7 @@ jobs:
           esac
 
   windows-unsigned:
-    if: false
+#    if: false
     needs: "create-release"
     runs-on: windows-2022
     permissions:
@@ -81,7 +81,7 @@ jobs:
           args: --win
 
   windows:
-#    if: false
+    if: false
     needs: "create-release"
     runs-on: windows-2022
     permissions:
