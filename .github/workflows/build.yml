@@ -4,8 +4,12 @@ on:
   push:
     branches:
       - main
-
-#on: workflow_dispatch
+  workflow_dispatch:
+    inputs:
+      linux_only:
+        description: "Rebuild and re-upload only the Linux assets onto the existing (possibly already published) release for the current package.json version"
+        type: boolean
+        default: false
 
 jobs:
 
@@ -27,6 +31,7 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINUX_ONLY: ${{ inputs.linux_only }}
         run: |
           set -euo pipefail
           RELEASE_TAG="v$PACKAGE_VERSION"
@@ -43,8 +48,12 @@ jobs:
               echo "Reusing draft release $RELEASE_TAG"
               ;;
             false)
-              echo "Release $RELEASE_TAG is already published; use a new version" >&2
-              exit 1
+              if [ "$LINUX_ONLY" = "true" ]; then
+                echo "Release $RELEASE_TAG is already published; linux_only run will overwrite its Linux assets"
+              else
+                echo "Release $RELEASE_TAG is already published; use a new version" >&2
+                exit 1
+              fi
               ;;
             *)
               echo "Expected at most one release with a valid draft status for $RELEASE_TAG" >&2
@@ -81,7 +90,7 @@ jobs:
           args: --win
 
   windows:
-#    if: false
+    if: ${{ !inputs.linux_only }}
     needs: "create-release"
     runs-on: windows-2022
     permissions:
@@ -239,7 +248,7 @@ jobs:
           #  --notes "Pinokio version $PACKAGE_VERSION."
 
   mac:
-#    if: false
+    if: ${{ !inputs.linux_only }}
     needs: "create-release"
     runs-on: macos-latest
     permissions:
